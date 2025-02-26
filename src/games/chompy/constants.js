@@ -22,7 +22,7 @@ const MODE_SEQUENCE = [
   { name: 'random', duration: Number.POSITIVE_INFINITY },
 ];
 
-const DEFAULT_GHOST_PALETTE = ['#ff5f5f', '#ff87d7', '#5fd7ff', '#ffaf5f'];
+const DEFAULT_GHOST_PALETTE = ['#ff5f5f', '#5fd7ff', '#ff87d7', '#ffaf5f'];
 
 module.exports = {
   DIRECTIONS,
