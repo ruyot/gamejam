@@ -40,7 +40,7 @@ function dijkstra(grid, startX, startY) {
   );
   dist[startY][startX] = 0;
 
-  // Simple BFS since all edge weights are 1
+  // BFS since all edge weights are 1
   const queue = [{ x: startX, y: startY }];
   let head = 0;
 
@@ -139,7 +139,6 @@ module.exports = {
   chooseClosestOption,
   chooseFarthestOption,
   dijkstra,
-  dijkstraChoose,
   findPath,
 };
 
