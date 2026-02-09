@@ -1,0 +1,26 @@
+{
+  "name": "gamejam",
+  "version": "0.1.0",
+  "description": "Terminal Game Arcade with classic playable games",
+  "main": "src/index.js",
+  "bin": {
+    "gamejam": "./bin/gamejam.js"
+  },
+  "scripts": {
+    "start": "node ./bin/gamejam.js"
+  },
+  "keywords": [
+    "terminal",
+    "arcade",
+    "cli",
+    "games",
+    "blessed"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "blessed": "^0.1.81"
+  }
+}
