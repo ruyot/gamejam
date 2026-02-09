@@ -1,0 +1,26 @@
+{
+  "menu": {
+    "titleArtFile": "art/menu-title.txt",
+    "subtitle": "Terminal Arcade",
+    "selectedCursor": ">",
+    "unselectedCursor": " ",
+    "comingSoonSuffix": "(soon)",
+    "hints": {
+      "navigate": "[UP/DOWN] Navigate",
+      "select": "[ENTER] Select",
+      "quit": "[Q] Quit"
+    }
+  },
+  "chompy": {
+    "title": "[ CHOMPY ]",
+    "controlsHint": "[Arrows/WASD] Move  [P/Space] Pause  [R] Restart  [Q/Esc] Menu",
+    "glyphFiles": {
+      "playerFrames": "art/chompy-player.txt",
+      "ghostNormal": "art/chompy-ghost-normal.txt",
+      "ghostReleased": "art/chompy-ghost-released.txt",
+      "ghostFrightenedFrames": "art/chompy-ghost-frightened.txt",
+      "pellet": "art/chompy-pellet.txt",
+      "powerPelletFrames": "art/chompy-power-pellet.txt"
+    }
+  }
+}

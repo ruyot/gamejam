@@ -1,6 +1,7 @@
 'use strict';
 
 const blessed = require('blessed');
+const { loadDesignSystem, colorize } = require('../design/system');
 const { loadScores, saveScore } = require('../lib/highscore');
 
 const MAZE_TEMPLATE = [
@@ -47,17 +48,13 @@ const MODE_SEQUENCE = [
   { name: 'random', duration: Number.POSITIVE_INFINITY },
 ];
 
-const GHOST_COLORS = ['#ff5f5f', '#ff87d7', '#5fd7ff', '#ffaf5f'];
-
-const FRAME_WIDTH = 82;
-const FRAME_HEIGHT = 32;
-const MIN_TERMINAL_WIDTH = 72;
-const MIN_TERMINAL_HEIGHT = 30;
-
 class ChompyGame {
   constructor(screen, { onExit }) {
     this.screen = screen;
     this.onExit = onExit;
+    this.design = loadDesignSystem().chompy;
+    this.colors = this.design.colors;
+    this.glyphs = this.design.glyphs;
 
     this.active = false;
     this.loop = null;
@@ -103,25 +100,28 @@ class ChompyGame {
   }
 
   createLayout() {
+    const colors = this.colors;
+    const frame = this.design.frame;
+
     this.root = blessed.box({
       parent: this.screen,
       width: '100%',
       height: '100%',
-      style: { bg: 16 },
+      style: { bg: colors.screenBg },
     });
 
     this.frame = blessed.box({
       parent: this.root,
       top: 'center',
       left: 'center',
-      width: FRAME_WIDTH,
-      height: FRAME_HEIGHT,
+      width: frame.width,
+      height: frame.height,
       border: 'line',
       tags: true,
       style: {
-        fg: 230,
-        bg: 17,
-        border: { fg: 45 },
+        fg: colors.frameFg,
+        bg: colors.frameBg,
+        border: { fg: colors.frameBorder },
       },
     });
 
@@ -133,7 +133,7 @@ class ChompyGame {
       height: 1,
       tags: true,
       align: 'center',
-      content: '{#93c5fd-fg}█ CHOMPY █{/}',
+      content: colorize(this.design.title, colors.title),
     });
 
     this.hudBox = blessed.box({
@@ -154,7 +154,7 @@ class ChompyGame {
       border: 'line',
       tags: true,
       style: {
-        border: { fg: 38 },
+        border: { fg: colors.boardBorder },
       },
     });
 
@@ -176,8 +176,7 @@ class ChompyGame {
       height: 1,
       tags: true,
       align: 'center',
-      content:
-        '{#7dd3fc-fg}[Arrows/WASD]{/} Move  {#fde68a-fg}[P/Space]{/} Pause  {#fda4af-fg}[R]{/} Restart  {#fecaca-fg}[Q/Esc]{/} Menu',
+      content: this.renderControlsHint(),
     });
 
     this.resizeBox = blessed.box({
@@ -190,13 +189,12 @@ class ChompyGame {
       tags: true,
       hidden: true,
       style: {
-        bg: 17,
-        border: { fg: 197 },
+        bg: colors.resizeBg,
+        border: { fg: colors.resizeBorder },
       },
       align: 'center',
       valign: 'middle',
-      content:
-        '{#fecaca-fg}Terminal too small for GameJam{/}\nResize to at least {#fde68a-fg}72x30{/}.',
+      content: `${colorize(this.design.status.tooSmall, colors.resizeTitle)}\n${colorize(this.design.status.resizeHint, colors.resizeHint)}`,
     });
   }
 
@@ -226,6 +224,10 @@ class ChompyGame {
       { x: this.mazeWidth - 2, y: this.mazeHeight - 2 },
     ];
 
+    const ghostPalette =
+      Array.isArray(this.design.ghostPalette) && this.design.ghostPalette.length > 0
+        ? this.design.ghostPalette
+        : ['#ff5f5f', '#ff87d7', '#5fd7ff', '#ffaf5f'];
     const ghostStarts = expandGhostStarts(this.maze.ghostStarts, this.grid);
     this.ghosts = ghostStarts.map((start, index) => ({
       id: index + 1,
@@ -234,7 +236,7 @@ class ChompyGame {
       startX: start.x,
       startY: start.y,
       dir: index % 2 === 0 ? 'left' : 'right',
-      color: GHOST_COLORS[index % GHOST_COLORS.length],
+      color: ghostPalette[index % ghostPalette.length],
       scatterTarget: corners[index % corners.length],
       releaseDelay: index * 350,
     }));
@@ -602,9 +604,22 @@ class ChompyGame {
     return MODE_SEQUENCE[this.modeIndex].name;
   }
 
+  renderControlsHint() {
+    return this.design.controlsHint
+      .replace(
+        '[Arrows/WASD]',
+        colorize('[Arrows/WASD]', this.colors.controls),
+      )
+      .replace('[P/Space]', colorize('[P/Space]', this.colors.controlsPause))
+      .replace('[R]', colorize('[R]', this.colors.controlsRestart))
+      .replace('[Q/Esc]', colorize('[Q/Esc]', this.colors.controlsQuit));
+  }
+
   render() {
+    const frame = this.design.frame;
     const tooSmall =
-      this.screen.width < MIN_TERMINAL_WIDTH || this.screen.height < MIN_TERMINAL_HEIGHT;
+      this.screen.width < frame.minTerminalWidth ||
+      this.screen.height < frame.minTerminalHeight;
 
     if (tooSmall) {
       this.frame.hide();
@@ -624,31 +639,32 @@ class ChompyGame {
   }
 
   renderHud() {
+    const colors = this.colors;
     const mode = this.state === 'paused' ? 'PAUSED' : this.getCurrentGhostMode().toUpperCase();
-    const livesText = '●'.repeat(this.lives).padEnd(3, '○');
+    const livesText = this.glyphs.lifeFull.repeat(this.lives).padEnd(3, this.glyphs.lifeEmpty);
     const pelletsLeft = this.pellets.size + this.powerPellets.size;
     const powerSeconds = this.powerTimer > 0 ? (this.powerTimer / 1000).toFixed(1) : '--';
 
     return [
-      `{#dbeafe-fg}SCORE{/} {#facc15-fg}${this.score}{/}   {#dbeafe-fg}HIGH{/} {#facc15-fg}${this.highScore}{/}   {#dbeafe-fg}LEVEL{/} {#7dd3fc-fg}${this.level}{/}`,
-      `{#dbeafe-fg}LIVES{/} {#fb7185-fg}${livesText}{/}   {#dbeafe-fg}MODE{/} {#86efac-fg}${mode}{/}   {#dbeafe-fg}PELLETS{/} ${pelletsLeft}   {#dbeafe-fg}POWER{/} ${powerSeconds}s`,
+      `${colorize('SCORE', colors.hudLabel)} ${colorize(String(this.score), colors.hudScore)}   ${colorize('HIGH', colors.hudLabel)} ${colorize(String(this.highScore), colors.hudScore)}   ${colorize('LEVEL', colors.hudLabel)} ${colorize(String(this.level), colors.hudLevel)}`,
+      `${colorize('LIVES', colors.hudLabel)} ${colorize(livesText, colors.hudLives)}   ${colorize('MODE', colors.hudLabel)} ${colorize(mode, colors.hudMode)}   ${colorize('PELLETS', colors.hudLabel)} ${pelletsLeft}   ${colorize('POWER', colors.hudLabel)} ${powerSeconds}s`,
     ].join('\n');
   }
 
   renderStatusLine() {
     if (this.state === 'gameover') {
-      return '{#f87171-fg}Game Over{/}  Press {#fde68a-fg}[Enter]{/} or {#fde68a-fg}[R]{/} to restart.';
+      return `${colorize('Game Over', this.colors.statusGameOver)}  Press ${colorize('[Enter]', this.colors.controlsPause)} or ${colorize('[R]', this.colors.controlsPause)} to restart.`;
     }
     if (this.state === 'paused') {
-      return '{#fef08a-fg}Paused{/}  Press {#fde68a-fg}[P]{/} or {#fde68a-fg}[Space]{/} to continue.';
+      return `${colorize('Paused', this.colors.statusPaused)}  Press ${colorize('[P]', this.colors.controlsPause)} or ${colorize('[Space]', this.colors.controlsPause)} to continue.`;
     }
     if (this.state === 'level-clear') {
-      return `{#86efac-fg}${this.statusText}{/}`;
+      return colorize(this.statusText, this.colors.statusLevelClear);
     }
     if (this.respawnTimer > 0) {
-      return '{#fbbf24-fg}Get ready...{/}';
+      return colorize('Get ready...', this.colors.statusReady);
     }
-    return `{#a5f3fc-fg}${this.statusText}{/}`;
+    return colorize(this.statusText, this.colors.statusInfo);
   }
 
   renderBoard() {
@@ -664,7 +680,10 @@ class ChompyGame {
         const key = pointKey(x, y);
 
         if (this.player.x === x && this.player.y === y) {
-          row += '{#fbbf24-fg}◉{/}';
+          row += colorize(
+            pickFrame(this.glyphs.playerFrames, this.frameCounter, 8),
+            this.colors.player,
+          );
           continue;
         }
 
@@ -674,18 +693,23 @@ class ChompyGame {
         }
 
         if (!this.isWalkable(x, y)) {
-          row += (x + y) % 2 === 0 ? '{#1d4ed8-fg}█{/}' : '{#2563eb-fg}▓{/}';
+          row += colorize(
+            (x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd,
+            (x + y) % 2 === 0 ? this.colors.wallEven : this.colors.wallOdd,
+          );
           continue;
         }
 
         if (this.powerPellets.has(key)) {
-          const glyph = this.frameCounter % 16 < 8 ? '●' : '○';
-          row += `{#fde047-fg}${glyph}{/}`;
+          row += colorize(
+            pickFrame(this.glyphs.powerPelletFrames, this.frameCounter, 8),
+            this.colors.powerPellet,
+          );
           continue;
         }
 
         if (this.pellets.has(key)) {
-          row += '{#f8fafc-fg}·{/}';
+          row += colorize(this.glyphs.pellet, this.colors.pellet);
           continue;
         }
 
@@ -699,12 +723,15 @@ class ChompyGame {
 
   renderGhost(ghost) {
     if (this.powerTimer > 0) {
-      return this.frameCounter % 10 < 5 ? '{#60a5fa-fg}◆{/}' : '{#bfdbfe-fg}◇{/}';
+      return colorize(
+        pickFrame(this.glyphs.ghostFrightenedFrames, this.frameCounter, 5),
+        this.frameCounter % 10 < 5 ? this.colors.ghostFrightenedA : this.colors.ghostFrightenedB,
+      );
     }
     if (ghost.releaseDelay > 0) {
-      return '{#64748b-fg}◇{/}';
+      return colorize(this.glyphs.ghostReleased, this.colors.ghostReleased);
     }
-    return `{${ghost.color}-fg}◆{/}`;
+    return colorize(this.glyphs.ghostNormal, ghost.color);
   }
 
   bumpHighScore() {
@@ -874,6 +901,17 @@ function manhattan(ax, ay, bx, by) {
 
 function pointKey(x, y) {
   return `${x},${y}`;
+}
+
+function pickFrame(frames, frameCounter, divisor) {
+  if (!Array.isArray(frames) || frames.length === 0) {
+    return '?';
+  }
+  if (frames.length === 1) {
+    return frames[0];
+  }
+  const index = Math.floor(frameCounter / divisor) % frames.length;
+  return frames[index];
 }
 
 module.exports = {

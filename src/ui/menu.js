@@ -1,6 +1,7 @@
 'use strict';
 
 const blessed = require('blessed');
+const { loadDesignSystem, colorize } = require('../design/system');
 
 const MENU_ITEMS = [
   { id: 'chompy', label: 'Chompy' },
@@ -10,20 +11,12 @@ const MENU_ITEMS = [
   { id: 'quit', label: 'Quit' },
 ];
 
-const TITLE_ART = [
-  ' ██████╗  █████╗ ███╗   ███╗███████╗     ██╗ █████╗ ███╗   ███╗ ',
-  '██╔════╝ ██╔══██╗████╗ ████║██╔════╝     ██║██╔══██╗████╗ ████║ ',
-  '██║  ███╗███████║██╔████╔██║█████╗       ██║███████║██╔████╔██║ ',
-  '██║   ██║██╔══██║██║╚██╔╝██║██╔══╝  ██   ██║██╔══██║██║╚██╔╝██║ ',
-  '╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗╚█████╔╝██║  ██║██║ ╚═╝ ██║ ',
-  ' ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝ ╚════╝ ╚═╝  ╚═╝╚═╝     ╚═╝ ',
-];
-
 class MenuView {
   constructor(screen, actions) {
     this.screen = screen;
     this.actions = actions;
     this.selectedIndex = 0;
+    this.design = loadDesignSystem().menu;
     this.onKeypress = this.onKeypress.bind(this);
   }
 
@@ -34,25 +27,27 @@ class MenuView {
   }
 
   createLayout() {
+    const colors = this.design.colors;
+
     this.root = blessed.box({
       parent: this.screen,
       width: '100%',
       height: '100%',
-      style: { bg: 16 },
+      style: { bg: colors.screenBg },
     });
 
     this.frame = blessed.box({
       parent: this.root,
       top: 'center',
       left: 'center',
-      width: 71,
-      height: 26,
+      width: this.design.frame.width,
+      height: this.design.frame.height,
       border: 'line',
       tags: true,
       style: {
-        fg: 255,
-        bg: 17,
-        border: { fg: 39 },
+        fg: colors.frameFg,
+        bg: colors.frameBg,
+        border: { fg: colors.frameBorder },
       },
     });
 
@@ -64,7 +59,9 @@ class MenuView {
       height: 8,
       tags: true,
       align: 'center',
-      content: TITLE_ART.map((line) => `{#93c5fd-fg}${line}{/}`).join('\n'),
+      content: this.design.titleArtLines
+        .map((line) => colorize(line, colors.title))
+        .join('\n'),
     });
 
     this.subtitleBox = blessed.box({
@@ -75,7 +72,7 @@ class MenuView {
       height: 2,
       tags: true,
       align: 'center',
-      content: '{#7dd3fc-fg}Terminal Arcade{/}',
+      content: colorize(this.design.subtitle, colors.subtitle),
     });
 
     this.menuBox = blessed.box({
@@ -96,8 +93,11 @@ class MenuView {
       height: 2,
       tags: true,
       align: 'center',
-      content:
-        '{#bae6fd-fg}[↑↓] Navigate{/}  {#fde68a-fg}[ENTER] Select{/}  {#fecaca-fg}[Q] Quit{/}',
+      content: [
+        colorize(this.design.hints.navigate, colors.hintNavigate),
+        colorize(this.design.hints.select, colors.hintSelect),
+        colorize(this.design.hints.quit, colors.hintQuit),
+      ].join('  '),
     });
 
     this.bottomBorder = blessed.box({
@@ -108,17 +108,27 @@ class MenuView {
       height: 1,
       tags: true,
       align: 'center',
-      content: '{#334155-fg}─────────────────────────────────────────────────────────────────────{/}',
+      content: colorize(this.design.bottomRule, colors.bottomRule),
     });
   }
 
   render() {
+    const colors = this.design.colors;
+
     const lines = MENU_ITEMS.map((item, index) => {
       const isSelected = index === this.selectedIndex;
-      const cursor = isSelected ? '▸' : ' ';
-      const label = item.comingSoon ? `${item.label}  {#64748b-fg}(soon){/}` : item.label;
-      const color = isSelected ? '#fef08a' : item.comingSoon ? '#94a3b8' : '#e2e8f0';
-      return `${cursor} {${color}-fg}${label}{/}`;
+      const cursor = isSelected
+        ? this.design.selectedCursor
+        : this.design.unselectedCursor;
+      const labelColor = isSelected
+        ? colors.selected
+        : item.comingSoon
+          ? colors.comingSoon
+          : colors.default;
+      const suffix = item.comingSoon
+        ? `  ${colorize(this.design.comingSoonSuffix, colors.comingSoonSuffix)}`
+        : '';
+      return `${colorize(cursor, colors.selected)} ${colorize(item.label, labelColor)}${suffix}`;
     });
 
     this.menuBox.setContent(lines.join('\n'));
