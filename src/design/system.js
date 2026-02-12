@@ -14,6 +14,28 @@ const DEFAULT_MENU_TITLE = [
   ' \\_____|\\__,_|_| |_| |_|\\___|  |_|\\__,_|_| |_| |_| ',
 ];
 
+const DEFAULT_CHOMPY_MAZE = [
+  '###########################',
+  '#o....#.........#....#...o#',
+  '#.##.#.#####.#.#.#####.#..#',
+  '#....#.....#.#.#.....#....#',
+  '####.###.#.#.#.#.#.###.####',
+  '#......#.#.....#.#......#.#',
+  '#.######.#### ####.######.#',
+  '#...........   ...........#',
+  '###.###.### ##### ###.###.#',
+  '#.#.#.#.# ### ### #.#.#.#.#',
+  '#...#...#   G G   #...#...#',
+  '#.#.#.#.# ####### #.#.#.#.#',
+  '#...........   ...........#',
+  '#.######.#### ###.######..#',
+  '#o....#...P...#.......#..o#',
+  '###.#.#.#####.#.#####.#.###',
+  '#...#.#.....#.#.#.....#...#',
+  '#.###.#####.#.#.#.#####.###',
+  '###########################',
+];
+
 const DEFAULT_DESIGN = {
   menu: {
     frame: {
@@ -63,7 +85,18 @@ const DEFAULT_DESIGN = {
     },
     controlsHint:
       '[Arrows/WASD] Move  [P/Space] Pause  [R] Restart  [Q/Esc] Menu',
+    tileWidth: 2,
     ghostPalette: ['#ff5f5f', '#ff87d7', '#5fd7ff', '#ffaf5f'],
+    maze: {
+      file: 'maps/chompy-maze.txt',
+      legend: {
+        wall: ['#', '[', ']', '|', '+', '-'],
+        pellet: '.',
+        powerPellet: 'o',
+        playerStart: 'P',
+        ghostStart: 'G',
+      },
+    },
     glyphFiles: {
       playerFrames: 'art/chompy-player.txt',
       ghostNormal: 'art/chompy-ghost-normal.txt',
@@ -74,10 +107,10 @@ const DEFAULT_DESIGN = {
     },
     glyphs: {
       playerFrames: ['C', 'O'],
-      ghostNormal: 'M',
-      ghostReleased: 'm',
+      ghostNormal: ['M'],
+      ghostReleased: ['m'],
       ghostFrightenedFrames: ['w', 'W'],
-      pellet: '.',
+      pellet: ['.'],
       powerPelletFrames: ['o', 'O'],
       wallEven: '#',
       wallOdd: '%',
@@ -132,30 +165,53 @@ function loadDesignSystem() {
 
   const glyphFiles = merged.chompy.glyphFiles || {};
   const glyphs = merged.chompy.glyphs || {};
+  const maze = merged.chompy.maze || {};
+  const mazeLegend = maze.legend || {};
 
   const chompy = {
     ...merged.chompy,
+    maze: {
+      ...maze,
+      legend: {
+        ...mazeLegend,
+        wall: asArray(mazeLegend.wall, DEFAULT_DESIGN.chompy.maze.legend.wall),
+        pellet: asString(mazeLegend.pellet, DEFAULT_DESIGN.chompy.maze.legend.pellet),
+        powerPellet: asString(
+          mazeLegend.powerPellet,
+          DEFAULT_DESIGN.chompy.maze.legend.powerPellet,
+        ),
+        playerStart: asString(
+          mazeLegend.playerStart,
+          DEFAULT_DESIGN.chompy.maze.legend.playerStart,
+        ),
+        ghostStart: asString(
+          mazeLegend.ghostStart,
+          DEFAULT_DESIGN.chompy.maze.legend.ghostStart,
+        ),
+      },
+      lines: readMapLines(resolveAssetPath(maze.file), DEFAULT_CHOMPY_MAZE),
+    },
     glyphs: {
       ...glyphs,
       playerFrames: readTextLines(
         resolveAssetPath(glyphFiles.playerFrames),
         asArray(glyphs.playerFrames, DEFAULT_DESIGN.chompy.glyphs.playerFrames),
       ),
-      ghostNormal: readFirstLine(
+      ghostNormal: readTextLines(
         resolveAssetPath(glyphFiles.ghostNormal),
-        asString(glyphs.ghostNormal, DEFAULT_DESIGN.chompy.glyphs.ghostNormal),
+        asLines(glyphs.ghostNormal, DEFAULT_DESIGN.chompy.glyphs.ghostNormal),
       ),
-      ghostReleased: readFirstLine(
+      ghostReleased: readTextLines(
         resolveAssetPath(glyphFiles.ghostReleased),
-        asString(glyphs.ghostReleased, DEFAULT_DESIGN.chompy.glyphs.ghostReleased),
+        asLines(glyphs.ghostReleased, DEFAULT_DESIGN.chompy.glyphs.ghostReleased),
       ),
       ghostFrightenedFrames: readTextLines(
         resolveAssetPath(glyphFiles.ghostFrightenedFrames),
         asArray(glyphs.ghostFrightenedFrames, DEFAULT_DESIGN.chompy.glyphs.ghostFrightenedFrames),
       ),
-      pellet: readFirstLine(
+      pellet: readTextLines(
         resolveAssetPath(glyphFiles.pellet),
-        asString(glyphs.pellet, DEFAULT_DESIGN.chompy.glyphs.pellet),
+        asLines(glyphs.pellet, DEFAULT_DESIGN.chompy.glyphs.pellet),
       ),
       powerPelletFrames: readTextLines(
         resolveAssetPath(glyphFiles.powerPelletFrames),
@@ -216,9 +272,21 @@ function readTextLines(filePath, fallbackLines) {
   }
 }
 
-function readFirstLine(filePath, fallbackValue) {
-  const lines = readTextLines(filePath, [fallbackValue]);
-  return lines[0] || fallbackValue;
+function readMapLines(filePath, fallbackLines) {
+  if (!filePath) {
+    return fallbackLines.slice();
+  }
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const lines = raw
+      .replace(/\r/g, '')
+      .split('\n')
+      .map((line) => line.replace(/\s+$/, ''))
+      .filter((line) => line.length > 0 && !line.trimStart().startsWith(';'));
+    return lines.length > 0 ? lines : fallbackLines.slice();
+  } catch (_error) {
+    return fallbackLines.slice();
+  }
 }
 
 function deepMerge(baseValue, overrideValue) {
@@ -269,6 +337,16 @@ function asString(value, fallbackValue) {
     return value;
   }
   return fallbackValue;
+}
+
+function asLines(value, fallbackValue) {
+  if (Array.isArray(value) && value.length > 0) {
+    return value.map((item) => String(item));
+  }
+  if (typeof value === 'string' && value.length > 0) {
+    return [value];
+  }
+  return Array.isArray(fallbackValue) ? fallbackValue.slice() : [String(fallbackValue)];
 }
 
 module.exports = {

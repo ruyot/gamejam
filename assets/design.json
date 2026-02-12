@@ -14,6 +14,17 @@
   "chompy": {
     "title": "[ CHOMPY ]",
     "controlsHint": "[Arrows/WASD] Move  [P/Space] Pause  [R] Restart  [Q/Esc] Menu",
+    "tileWidth": 2,
+    "maze": {
+      "file": "maps/chompy-maze.txt",
+      "legend": {
+        "wall": ["#", "[", "]", "|", "+", "-"],
+        "pellet": ".",
+        "powerPellet": "o",
+        "playerStart": "P",
+        "ghostStart": "G"
+      }
+    },
     "glyphFiles": {
       "playerFrames": "art/chompy-player.txt",
       "ghostNormal": "art/chompy-ghost-normal.txt",

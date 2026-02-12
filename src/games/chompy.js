@@ -4,28 +4,6 @@ const blessed = require('blessed');
 const { loadDesignSystem, colorize } = require('../design/system');
 const { loadScores, saveScore } = require('../lib/highscore');
 
-const MAZE_TEMPLATE = [
-  '###########################',
-  '#o....#.........#....#...o#',
-  '#.##.#.#####.#.#.#####.#..#',
-  '#....#.....#.#.#.....#....#',
-  '####.###.#.#.#.#.#.###.####',
-  '#......#.#.....#.#......#.#',
-  '#.######.#### ####.######.#',
-  '#...........   ...........#',
-  '###.###.### ##### ###.###.#',
-  '#.#.#.#.# ### ### #.#.#.#.#',
-  '#...#...#   G G   #...#...#',
-  '#.#.#.#.# ####### #.#.#.#.#',
-  '#...........   ...........#',
-  '#.######.#### ###.######..#',
-  '#o....#...P...#.......#..o#',
-  '###.#.#.#####.#.#####.#.###',
-  '#...#.#.....#.#.#.....#...#',
-  '#.###.#####.#.#.#.#####.###',
-  '###########################',
-];
-
 const DIRECTIONS = {
   up: { x: 0, y: -1 },
   down: { x: 0, y: 1 },
@@ -55,6 +33,9 @@ class ChompyGame {
     this.design = loadDesignSystem().chompy;
     this.colors = this.design.colors;
     this.glyphs = this.design.glyphs;
+    this.mazeLegend = this.design.maze.legend;
+    this.tileWidth = Math.max(1, Number(this.design.tileWidth || 1));
+    this.spriteSet = buildSpriteSet(this.glyphs, this.tileWidth);
 
     this.active = false;
     this.loop = null;
@@ -81,7 +62,7 @@ class ChompyGame {
     this.playerAccumulator = 0;
     this.ghostAccumulator = 0;
 
-    this.maze = parseMaze(MAZE_TEMPLATE);
+    this.maze = parseMaze(this.design.maze.lines, this.mazeLegend);
     this.mazeWidth = this.maze.width;
     this.mazeHeight = this.maze.height;
 
@@ -149,7 +130,7 @@ class ChompyGame {
       parent: this.frame,
       top: 7,
       left: 'center',
-      width: this.mazeWidth + 2,
+      width: this.mazeWidth * this.tileWidth + 2,
       height: this.mazeHeight + 2,
       border: 'line',
       tags: true,
@@ -204,7 +185,7 @@ class ChompyGame {
       this.pendingTimer = null;
     }
 
-    this.maze = parseMaze(MAZE_TEMPLATE);
+    this.maze = parseMaze(this.design.maze.lines, this.mazeLegend);
     this.grid = this.maze.grid;
     this.pellets = new Set(this.maze.pellets);
     this.powerPellets = new Set(this.maze.powerPellets);
@@ -681,7 +662,12 @@ class ChompyGame {
 
         if (this.player.x === x && this.player.y === y) {
           row += colorize(
-            pickFrame(this.glyphs.playerFrames, this.frameCounter, 8),
+            pickDirectionalFrame(
+              this.spriteSet.player,
+              this.player.dir,
+              this.frameCounter,
+              7,
+            ),
             this.colors.player,
           );
           continue;
@@ -694,7 +680,10 @@ class ChompyGame {
 
         if (!this.isWalkable(x, y)) {
           row += colorize(
-            (x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd,
+            tileGlyph(
+              (x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd,
+              this.tileWidth,
+            ),
             (x + y) % 2 === 0 ? this.colors.wallEven : this.colors.wallOdd,
           );
           continue;
@@ -702,18 +691,26 @@ class ChompyGame {
 
         if (this.powerPellets.has(key)) {
           row += colorize(
-            pickFrame(this.glyphs.powerPelletFrames, this.frameCounter, 8),
+            pickDirectionalFrame(
+              this.spriteSet.powerPellet,
+              this.player.dir,
+              this.frameCounter,
+              9,
+            ),
             this.colors.powerPellet,
           );
           continue;
         }
 
         if (this.pellets.has(key)) {
-          row += colorize(this.glyphs.pellet, this.colors.pellet);
+          row += colorize(
+            pickDirectionalFrame(this.spriteSet.pellet, this.player.dir, this.frameCounter, 9),
+            this.colors.pellet,
+          );
           continue;
         }
 
-        row += ' ';
+        row += ' '.repeat(this.tileWidth);
       }
       rows.push(row);
     }
@@ -724,14 +721,20 @@ class ChompyGame {
   renderGhost(ghost) {
     if (this.powerTimer > 0) {
       return colorize(
-        pickFrame(this.glyphs.ghostFrightenedFrames, this.frameCounter, 5),
+        pickDirectionalFrame(this.spriteSet.ghostFrightened, ghost.dir, this.frameCounter, 5),
         this.frameCounter % 10 < 5 ? this.colors.ghostFrightenedA : this.colors.ghostFrightenedB,
       );
     }
     if (ghost.releaseDelay > 0) {
-      return colorize(this.glyphs.ghostReleased, this.colors.ghostReleased);
+      return colorize(
+        pickDirectionalFrame(this.spriteSet.ghostReleased, ghost.dir, this.frameCounter, 8),
+        this.colors.ghostReleased,
+      );
     }
-    return colorize(this.glyphs.ghostNormal, ghost.color);
+    return colorize(
+      pickDirectionalFrame(this.spriteSet.ghostNormal, ghost.dir, this.frameCounter, 8),
+      ghost.color,
+    );
   }
 
   bumpHighScore() {
@@ -777,7 +780,12 @@ class ChompyGame {
   }
 }
 
-function parseMaze(template) {
+function parseMaze(template, legend) {
+  const wallTokens = new Set(asArray(legend.wall, ['#']));
+  const pelletToken = asString(legend.pellet, '.');
+  const powerPelletToken = asString(legend.powerPellet, 'o');
+  const playerToken = asString(legend.playerStart, 'P');
+  const ghostToken = asString(legend.ghostStart, 'G');
   const width = template.reduce((max, line) => Math.max(max, line.length), 0);
   const rows = template.map((line) => line.padEnd(width, ' '));
 
@@ -791,20 +799,20 @@ function parseMaze(template) {
     grid[y] = [];
     for (let x = 0; x < width; x += 1) {
       const char = rows[y][x];
-      if (char === '#') {
+      if (wallTokens.has(char)) {
         grid[y][x] = '#';
         continue;
       }
 
       grid[y][x] = ' ';
       const key = pointKey(x, y);
-      if (char === '.') {
+      if (char === pelletToken) {
         pellets.add(key);
-      } else if (char === 'o') {
+      } else if (char === powerPelletToken) {
         powerPellets.add(key);
-      } else if (char === 'P') {
+      } else if (char === playerToken) {
         playerStart = { x, y };
-      } else if (char === 'G') {
+      } else if (char === ghostToken) {
         ghostStarts.push({ x, y });
       }
     }
@@ -903,7 +911,11 @@ function pointKey(x, y) {
   return `${x},${y}`;
 }
 
-function pickFrame(frames, frameCounter, divisor) {
+function pickDirectionalFrame(sprite, direction, frameCounter, divisor) {
+  if (!sprite) {
+    return '?';
+  }
+  const frames = sprite[direction] || sprite.right;
   if (!Array.isArray(frames) || frames.length === 0) {
     return '?';
   }
@@ -912,6 +924,181 @@ function pickFrame(frames, frameCounter, divisor) {
   }
   const index = Math.floor(frameCounter / divisor) % frames.length;
   return frames[index];
+}
+
+function buildSpriteSet(glyphs, tileWidth) {
+  return {
+    player: buildDirectionalSprite(glyphs.playerFrames, tileWidth),
+    ghostNormal: buildDirectionalSprite(glyphs.ghostNormal, tileWidth),
+    ghostReleased: buildDirectionalSprite(glyphs.ghostReleased, tileWidth),
+    ghostFrightened: buildDirectionalSprite(glyphs.ghostFrightenedFrames, tileWidth),
+    pellet: buildDirectionalSprite(glyphs.pellet, tileWidth),
+    powerPellet: buildDirectionalSprite(glyphs.powerPelletFrames, tileWidth),
+  };
+}
+
+function buildDirectionalSprite(lines, tileWidth) {
+  const frames = splitArtFrames(lines);
+  const rightFrames = frames.map((frame) => artToTile(frame, tileWidth, 'horizontal'));
+  const leftFrames = frames.map((frame) =>
+    artToTile(mirrorArt(frame), tileWidth, 'horizontal'),
+  );
+  const upFrames = frames.map((frame) => artToTile(flipArt(frame), tileWidth, 'vertical'));
+  const downFrames = frames.map((frame) =>
+    artToTile(mirrorArt(flipArt(frame)), tileWidth, 'vertical'),
+  );
+  return {
+    right: rightFrames,
+    left: leftFrames,
+    up: upFrames,
+    down: downFrames,
+  };
+}
+
+function splitArtFrames(lines) {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return [['?']];
+  }
+  const normalized = lines.map((line) => String(line));
+  const isSingleCharFrameList = normalized.every(
+    (line) => line.length > 0 && line.length <= 3 && !/\s/.test(line),
+  );
+  if (isSingleCharFrameList && normalized.length > 1) {
+    return normalized.map((line) => [line]);
+  }
+  return [normalized];
+}
+
+function artToTile(lines, tileWidth, mode) {
+  const matrix = normalizeArt(lines);
+  if (matrix.length === 0 || matrix[0].length === 0) {
+    return tileGlyph(' ', tileWidth);
+  }
+  if (mode === 'vertical' && tileWidth >= 2) {
+    const topDensity = regionDensity(matrix, 0, matrix[0].length, 0, Math.ceil(matrix.length / 2));
+    const bottomDensity = regionDensity(
+      matrix,
+      0,
+      matrix[0].length,
+      Math.floor(matrix.length / 2),
+      matrix.length,
+    );
+    const pair = [densityToGlyph(topDensity), densityToGlyph(bottomDensity)].join('');
+    return tileGlyph(pair, tileWidth);
+  }
+
+  const chunkWidth = matrix[0].length / tileWidth;
+  let output = '';
+  for (let index = 0; index < tileWidth; index += 1) {
+    const startX = Math.floor(index * chunkWidth);
+    const endX = Math.floor((index + 1) * chunkWidth);
+    const density = regionDensity(matrix, startX, Math.max(startX + 1, endX), 0, matrix.length);
+    output += densityToGlyph(density);
+  }
+  return tileGlyph(output, tileWidth);
+}
+
+function normalizeArt(lines) {
+  const withoutTopBottomBlanks = trimVertical(lines.map((line) => String(line)));
+  if (withoutTopBottomBlanks.length === 0) {
+    return [];
+  }
+
+  const charRows = withoutTopBottomBlanks.map((line) => Array.from(line));
+  let minX = Number.POSITIVE_INFINITY;
+  let maxX = -1;
+
+  for (const row of charRows) {
+    for (let index = 0; index < row.length; index += 1) {
+      if (isInk(row[index])) {
+        minX = Math.min(minX, index);
+        maxX = Math.max(maxX, index);
+      }
+    }
+  }
+
+  if (maxX < minX) {
+    return [];
+  }
+
+  const width = maxX - minX + 1;
+  return charRows.map((row) => {
+    const cropped = row.slice(minX, maxX + 1);
+    while (cropped.length < width) {
+      cropped.push(' ');
+    }
+    return cropped;
+  });
+}
+
+function trimVertical(lines) {
+  let start = 0;
+  let end = lines.length;
+  while (start < end && lines[start].trim().length === 0) {
+    start += 1;
+  }
+  while (end > start && lines[end - 1].trim().length === 0) {
+    end -= 1;
+  }
+  return lines.slice(start, end);
+}
+
+function mirrorArt(lines) {
+  return lines.map((line) => Array.from(line).reverse().join(''));
+}
+
+function flipArt(lines) {
+  return lines.slice().reverse();
+}
+
+function regionDensity(matrix, startX, endX, startY, endY) {
+  let filled = 0;
+  let total = 0;
+  for (let y = Math.max(0, startY); y < Math.min(matrix.length, endY); y += 1) {
+    for (let x = Math.max(0, startX); x < Math.min(matrix[y].length, endX); x += 1) {
+      total += 1;
+      if (isInk(matrix[y][x])) {
+        filled += 1;
+      }
+    }
+  }
+  return total > 0 ? filled / total : 0;
+}
+
+function isInk(char) {
+  return char !== ' ' && char !== '\t';
+}
+
+function densityToGlyph(value) {
+  if (value <= 0.05) return ' ';
+  if (value <= 0.2) return '.';
+  if (value <= 0.35) return ':';
+  if (value <= 0.5) return '=';
+  if (value <= 0.7) return '+';
+  if (value <= 0.85) return '*';
+  return '#';
+}
+
+function tileGlyph(value, width) {
+  const text = String(value || '');
+  if (text.length >= width) {
+    return text.slice(0, width);
+  }
+  return text.padEnd(width, ' ');
+}
+
+function asArray(value, fallback) {
+  if (Array.isArray(value) && value.length > 0) {
+    return value;
+  }
+  return fallback;
+}
+
+function asString(value, fallback) {
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+  return fallback;
 }
 
 module.exports = {
