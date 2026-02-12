@@ -928,8 +928,12 @@ function pickDirectionalFrame(sprite, direction, frameCounter, divisor) {
 
 function buildSpriteSet(glyphs, tileWidth) {
   return {
-    player: buildDirectionalSprite(glyphs.playerFrames, tileWidth),
-    ghostNormal: buildDirectionalSprite(glyphs.ghostNormal, tileWidth),
+    player: buildDirectionalSprite(glyphs.playerFrames, tileWidth, glyphs.playerDirectional),
+    ghostNormal: buildDirectionalSprite(
+      glyphs.ghostNormal,
+      tileWidth,
+      glyphs.ghostNormalDirectional,
+    ),
     ghostReleased: buildDirectionalSprite(glyphs.ghostReleased, tileWidth),
     ghostFrightened: buildDirectionalSprite(glyphs.ghostFrightenedFrames, tileWidth),
     pellet: buildDirectionalSprite(glyphs.pellet, tileWidth),
@@ -937,7 +941,7 @@ function buildSpriteSet(glyphs, tileWidth) {
   };
 }
 
-function buildDirectionalSprite(lines, tileWidth) {
+function buildDirectionalSprite(lines, tileWidth, overrides) {
   const frames = splitArtFrames(lines);
   const rightFrames = frames.map((frame) => artToTile(frame, tileWidth, 'horizontal'));
   const leftFrames = frames.map((frame) =>
@@ -947,12 +951,25 @@ function buildDirectionalSprite(lines, tileWidth) {
   const downFrames = frames.map((frame) =>
     artToTile(mirrorArt(flipArt(frame)), tileWidth, 'vertical'),
   );
+
+  const overrideRight = compileOverrideFrames(overrides && overrides.right, tileWidth);
+  const overrideLeft = compileOverrideFrames(overrides && overrides.left, tileWidth);
+  const overrideUp = compileOverrideFrames(overrides && overrides.up, tileWidth);
+  const overrideDown = compileOverrideFrames(overrides && overrides.down, tileWidth);
+
   return {
-    right: rightFrames,
-    left: leftFrames,
-    up: upFrames,
-    down: downFrames,
+    right: overrideRight || rightFrames,
+    left: overrideLeft || leftFrames,
+    up: overrideUp || upFrames,
+    down: overrideDown || downFrames,
   };
+}
+
+function compileOverrideFrames(lines, tileWidth) {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return null;
+  }
+  return splitArtFrames(lines).map((frame) => artToTile(frame, tileWidth, 'horizontal'));
 }
 
 function splitArtFrames(lines) {

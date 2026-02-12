@@ -99,7 +99,15 @@ const DEFAULT_DESIGN = {
     },
     glyphFiles: {
       playerFrames: 'art/chompy-player.txt',
+      playerRightFrames: 'art/chompy-player-right.txt',
+      playerLeftFrames: 'art/chompy-player-left.txt',
+      playerUpFrames: 'art/chompy-player-up.txt',
+      playerDownFrames: 'art/chompy-player-down.txt',
       ghostNormal: 'art/chompy-ghost-normal.txt',
+      ghostRightFrames: 'art/chompy-ghost-right.txt',
+      ghostLeftFrames: 'art/chompy-ghost-left.txt',
+      ghostUpFrames: 'art/chompy-ghost-up.txt',
+      ghostDownFrames: 'art/chompy-ghost-down.txt',
       ghostReleased: 'art/chompy-ghost-released.txt',
       ghostFrightenedFrames: 'art/chompy-ghost-frightened.txt',
       pellet: 'art/chompy-pellet.txt',
@@ -197,10 +205,22 @@ function loadDesignSystem() {
         resolveAssetPath(glyphFiles.playerFrames),
         asArray(glyphs.playerFrames, DEFAULT_DESIGN.chompy.glyphs.playerFrames),
       ),
+      playerDirectional: {
+        right: optionalTextLines(resolveAssetPath(glyphFiles.playerRightFrames)),
+        left: optionalTextLines(resolveAssetPath(glyphFiles.playerLeftFrames)),
+        up: optionalTextLines(resolveAssetPath(glyphFiles.playerUpFrames)),
+        down: optionalTextLines(resolveAssetPath(glyphFiles.playerDownFrames)),
+      },
       ghostNormal: readTextLines(
         resolveAssetPath(glyphFiles.ghostNormal),
         asLines(glyphs.ghostNormal, DEFAULT_DESIGN.chompy.glyphs.ghostNormal),
       ),
+      ghostNormalDirectional: {
+        right: optionalTextLines(resolveAssetPath(glyphFiles.ghostRightFrames)),
+        left: optionalTextLines(resolveAssetPath(glyphFiles.ghostLeftFrames)),
+        up: optionalTextLines(resolveAssetPath(glyphFiles.ghostUpFrames)),
+        down: optionalTextLines(resolveAssetPath(glyphFiles.ghostDownFrames)),
+      },
       ghostReleased: readTextLines(
         resolveAssetPath(glyphFiles.ghostReleased),
         asLines(glyphs.ghostReleased, DEFAULT_DESIGN.chompy.glyphs.ghostReleased),
@@ -287,6 +307,13 @@ function readMapLines(filePath, fallbackLines) {
   } catch (_error) {
     return fallbackLines.slice();
   }
+}
+
+function optionalTextLines(filePath) {
+  const lines = readTextLines(filePath, []).filter(
+    (line) => line.trim().length > 0 && !line.trimStart().startsWith(';'),
+  );
+  return lines.length > 0 ? lines : null;
 }
 
 function deepMerge(baseValue, overrideValue) {

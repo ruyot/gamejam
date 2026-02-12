@@ -1,0 +1,2 @@
+; Optional explicit right-facing ghost art.
+; If this file is empty/missing, the engine uses chompy-ghost-normal.txt as right-facing base.

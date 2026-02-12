@@ -1,0 +1,2 @@
+; Optional explicit up-facing ghost art.
+; If empty/missing, up is auto-generated from right-facing ghost art.

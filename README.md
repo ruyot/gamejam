@@ -45,7 +45,15 @@ All visual styling and ASCII art can be edited without touching game logic:
 - `assets/design.json` also controls maze file + tile legend + map tile width.
 - `assets/art/menu-title.txt` controls the menu title art.
 - `assets/art/chompy-player.txt` controls player source art.
+- `assets/art/chompy-player-right.txt` controls explicit player right-facing art.
+- `assets/art/chompy-player-left.txt` controls explicit player left-facing art.
+- `assets/art/chompy-player-up.txt` controls explicit player up-facing art.
+- `assets/art/chompy-player-down.txt` controls explicit player down-facing art.
 - `assets/art/chompy-ghost-normal.txt` controls regular ghost source art.
+- `assets/art/chompy-ghost-right.txt` controls explicit right-facing ghost art.
+- `assets/art/chompy-ghost-left.txt` controls explicit left-facing ghost art.
+- `assets/art/chompy-ghost-up.txt` controls explicit up-facing ghost art.
+- `assets/art/chompy-ghost-down.txt` controls explicit down-facing ghost art.
 - `assets/art/chompy-ghost-released.txt` controls returning ghost source art.
 - `assets/art/chompy-ghost-frightened.txt` controls frightened ghost source art.
 - `assets/art/chompy-pellet.txt` controls pellet source art.
@@ -57,5 +65,7 @@ Sprite rendering notes:
 - Maze rendering uses fixed-size map tiles.
 - Multi-line ASCII sprite art is downscaled into equal-sized tiles so different source sizes still fit the board.
 - Ghost facings are generated from your base ghost art by mirroring/flipping for left/up/down.
+- Player facings use explicit direction files when provided, otherwise they fall back to transform-generated facings.
+- Ghost facings use explicit direction files when provided; otherwise `chompy-ghost-normal.txt` is treated as right-facing and left/up/down are transform-generated.
 
 After editing assets, restart the app to see updates.
