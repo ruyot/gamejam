@@ -16,12 +16,15 @@ class MenuView {
     this.screen = screen;
     this.actions = actions;
     this.selectedIndex = 0;
+    this.titleFrame = 0;
+    this.titleTimer = null;
     this.design = loadDesignSystem().menu;
     this.onKeypress = this.onKeypress.bind(this);
   }
 
   mount() {
     this.createLayout();
+    this.startTitleAnimation();
     this.render();
     this.screen.on('keypress', this.onKeypress);
   }
@@ -59,9 +62,7 @@ class MenuView {
       height: 8,
       tags: true,
       align: 'center',
-      content: this.design.titleArtLines
-        .map((line) => colorize(line, colors.title))
-        .join('\n'),
+      content: '',
     });
 
     this.subtitleBox = blessed.box({
@@ -114,6 +115,7 @@ class MenuView {
 
   render() {
     const colors = this.design.colors;
+    this.updateTitleArt();
 
     const lines = MENU_ITEMS.map((item, index) => {
       const isSelected = index === this.selectedIndex;
@@ -133,6 +135,68 @@ class MenuView {
 
     this.menuBox.setContent(lines.join('\n'));
     this.screen.render();
+  }
+
+  startTitleAnimation() {
+    this.stopTitleAnimation();
+    this.updateTitleArt();
+    this.titleTimer = setInterval(() => {
+      this.titleFrame = (this.titleFrame + 1) % 10000;
+      this.updateTitleArt();
+      this.screen.render();
+    }, 90);
+  }
+
+  stopTitleAnimation() {
+    if (!this.titleTimer) {
+      return;
+    }
+    clearInterval(this.titleTimer);
+    this.titleTimer = null;
+  }
+
+  updateTitleArt() {
+    if (!this.titleBox) {
+      return;
+    }
+    this.titleBox.setContent(this.renderAnimatedTitle());
+  }
+
+  renderAnimatedTitle() {
+    const lines = this.design.titleArtLines || [];
+    return lines
+      .map((line, y) =>
+        Array.from(line)
+          .map((char, x) => this.colorizeTitleChar(char, x, y))
+          .join(''),
+      )
+      .join('\n');
+  }
+
+  colorizeTitleChar(char, x, y) {
+    if (char === ' ') {
+      return ' ';
+    }
+
+    const rgbPalette = [
+      '#ff004d',
+      '#ff8a00',
+      '#ffe600',
+      '#39ff14',
+      '#00e5ff',
+      '#0078ff',
+      '#b400ff',
+    ];
+    const matrixPalette = ['#00ff41', '#7dff7a', '#d4ffd2'];
+
+    const rgbIndex = (x + y + this.titleFrame) % rgbPalette.length;
+    const matrixPulse = ((x * 3 + y * 5 + this.titleFrame) % 17) < 2;
+    const color = matrixPulse
+      ? matrixPalette[(x + y + this.titleFrame) % matrixPalette.length]
+      : rgbPalette[rgbIndex];
+    const weight = matrixPulse ? 'bold,' : '';
+
+    return `{${weight}${color}-fg}${escapeTagChar(char)}{/}`;
   }
 
   onKeypress(ch, key) {
@@ -171,11 +235,22 @@ class MenuView {
 
   destroy() {
     this.screen.off('keypress', this.onKeypress);
+    this.stopTitleAnimation();
     if (this.root) {
       this.root.destroy();
       this.root = null;
     }
   }
+}
+
+function escapeTagChar(char) {
+  if (char === '{') {
+    return '\\{';
+  }
+  if (char === '}') {
+    return '\\}';
+  }
+  return char;
 }
 
 module.exports = {

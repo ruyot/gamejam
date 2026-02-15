@@ -57,11 +57,11 @@ class App {
       border: 'line',
       tags: true,
       style: {
-        fg: 230,
-        bg: 17,
-        border: { fg: 81 },
+        fg: 15,
+        bg: 16,
+        border: { fg: 15 },
       },
-      content: `{#fde68a-fg}${message}{/}`,
+      content: `{#ffffff-fg}${message}{/}`,
     });
 
     this.screen.render();
