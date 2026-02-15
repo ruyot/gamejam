@@ -54,6 +54,18 @@ class MenuView {
       },
     });
 
+    this.frameArtBox = blessed.box({
+      parent: this.frame,
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      tags: true,
+      align: 'left',
+      valign: 'top',
+      content: this.renderFrameArt(),
+    });
+
     this.titleBox = blessed.box({
       parent: this.frame,
       top: 1,
@@ -140,11 +152,16 @@ class MenuView {
   startTitleAnimation() {
     this.stopTitleAnimation();
     this.updateTitleArt();
+
+    const animation = this.design.titleAnimation || {};
+    const speedMs = clampNumber(animation.speedMs, 170, 40, 2000);
+    const step = clampNumber(animation.step, 1, 1, 100);
+
     this.titleTimer = setInterval(() => {
-      this.titleFrame = (this.titleFrame + 1) % 10000;
+      this.titleFrame = (this.titleFrame + step) % 10000;
       this.updateTitleArt();
       this.screen.render();
-    }, 90);
+    }, speedMs);
   }
 
   stopTitleAnimation() {
@@ -171,6 +188,16 @@ class MenuView {
           .join(''),
       )
       .join('\n');
+  }
+
+  renderFrameArt() {
+    const lines = Array.isArray(this.design.frameArtLines) ? this.design.frameArtLines : [];
+    if (lines.length === 0) {
+      return '';
+    }
+
+    const color = (this.design.colors && this.design.colors.frameArt) || this.design.colors.frameBorder;
+    return lines.map((line) => colorize(line, color)).join('\n');
   }
 
   colorizeTitleChar(char, x, y) {
@@ -251,6 +278,14 @@ function escapeTagChar(char) {
     return '\\}';
   }
   return char;
+}
+
+function clampNumber(value, fallback, min, max) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+  return Math.min(max, Math.max(min, Math.round(numeric)));
 }
 
 module.exports = {

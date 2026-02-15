@@ -169,6 +169,9 @@ function loadDesignSystem() {
   const menu = {
     ...merged.menu,
     titleArtLines: readTextLines(resolveAssetPath(merged.menu.titleArtFile), DEFAULT_MENU_TITLE),
+    frameArtLines: readTextLines(resolveAssetPath(merged.menu.frameArtFile), []).filter(
+      (line) => !line.trimStart().startsWith(';'),
+    ),
   };
 
   const glyphFiles = merged.chompy.glyphFiles || {};

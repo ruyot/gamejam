@@ -42,7 +42,9 @@ npx gamejam
 All visual styling and ASCII art can be edited without touching game logic:
 
 - `assets/design.json` controls labels, hints, colors, and glyph file paths.
+- `assets/design.json` `menu.titleAnimation.speedMs` controls rainbow title animation speed.
 - `assets/design.json` also controls maze file + tile legend + map tile width.
+- `assets/art/menu-frame.txt` controls menu page border/background ASCII art.
 - `assets/art/menu-title.txt` controls the menu title art.
 - `assets/art/chompy-player.txt` controls player source art.
 - `assets/art/chompy-player-right.txt` controls explicit player right-facing art.
