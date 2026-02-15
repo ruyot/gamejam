@@ -16,13 +16,23 @@
     "controlsHint": "[Arrows/WASD] Move  [P/Space] Pause  [R] Restart  [Q/Esc] Menu",
     "tileWidth": 2,
     "maze": {
-      "file": "maps/chompy-maze.txt",
+      "file": "maps/generic-bracket-maze.txt",
       "legend": {
         "wall": ["#", "[", "]", "|", "+", "-"],
         "pellet": ".",
         "powerPellet": "o",
         "playerStart": "P",
         "ghostStart": "G"
+      }
+    },
+    "colors": {
+      "wallByToken": {
+        "+": "#60a5fa",
+        "-": "#3b82f6",
+        "|": "#3b82f6",
+        "[": "#60a5fa",
+        "]": "#60a5fa",
+        "#": "#1d4ed8"
       }
     },
     "glyphFiles": {

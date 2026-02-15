@@ -187,6 +187,7 @@ class ChompyGame {
 
     this.maze = parseMaze(this.design.maze.lines, this.mazeLegend);
     this.grid = this.maze.grid;
+    this.wallGrid = this.maze.wallGrid;
     this.pellets = new Set(this.maze.pellets);
     this.powerPellets = new Set(this.maze.powerPellets);
 
@@ -679,13 +680,7 @@ class ChompyGame {
         }
 
         if (!this.isWalkable(x, y)) {
-          row += colorize(
-            tileGlyph(
-              (x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd,
-              this.tileWidth,
-            ),
-            (x + y) % 2 === 0 ? this.colors.wallEven : this.colors.wallOdd,
-          );
+          row += this.renderWallTile(x, y);
           continue;
         }
 
@@ -735,6 +730,43 @@ class ChompyGame {
       pickDirectionalFrame(this.spriteSet.ghostNormal, ghost.dir, this.frameCounter, 8),
       ghost.color,
     );
+  }
+
+  renderWallTile(x, y) {
+    const wallToken = this.getWallToken(x, y);
+    return colorize(
+      tileGlyph(this.resolveWallGlyph(wallToken, x, y), this.tileWidth),
+      this.resolveWallColor(wallToken, x, y),
+    );
+  }
+
+  getWallToken(x, y) {
+    if (!this.wallGrid || !this.wallGrid[y]) {
+      return '#';
+    }
+    return this.wallGrid[y][x] || '#';
+  }
+
+  resolveWallGlyph(token, x, y) {
+    if (token === '#') {
+      return (x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd;
+    }
+    const glyph = typeof token === 'string' && token.length > 0 ? token : '#';
+    return glyph.length === 1 ? glyph.repeat(this.tileWidth) : glyph;
+  }
+
+  resolveWallColor(token, x, y) {
+    const tokenPalette = this.colors.wallByToken;
+    if (tokenPalette && typeof tokenPalette === 'object') {
+      const tokenColor = tokenPalette[token];
+      if (tokenColor !== undefined && tokenColor !== null && tokenColor !== '') {
+        return tokenColor;
+      }
+    }
+    if (token === '#') {
+      return (x + y) % 2 === 0 ? this.colors.wallEven : this.colors.wallOdd;
+    }
+    return this.colors.wallOdd;
   }
 
   bumpHighScore() {
@@ -790,6 +822,7 @@ function parseMaze(template, legend) {
   const rows = template.map((line) => line.padEnd(width, ' '));
 
   const grid = [];
+  const wallGrid = [];
   const pellets = new Set();
   const powerPellets = new Set();
   const ghostStarts = [];
@@ -797,14 +830,17 @@ function parseMaze(template, legend) {
 
   for (let y = 0; y < rows.length; y += 1) {
     grid[y] = [];
+    wallGrid[y] = [];
     for (let x = 0; x < width; x += 1) {
       const char = rows[y][x];
       if (wallTokens.has(char)) {
         grid[y][x] = '#';
+        wallGrid[y][x] = char;
         continue;
       }
 
       grid[y][x] = ' ';
+      wallGrid[y][x] = null;
       const key = pointKey(x, y);
       if (char === pelletToken) {
         pellets.add(key);
@@ -826,6 +862,7 @@ function parseMaze(template, legend) {
     width,
     height: rows.length,
     grid,
+    wallGrid,
     pellets,
     powerPellets,
     playerStart,
