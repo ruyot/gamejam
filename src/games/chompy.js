@@ -82,7 +82,8 @@ class ChompyGame {
 
   createLayout() {
     const colors = this.colors;
-    const frame = this.design.frame;
+    const layout = this.getLayoutMetrics();
+    this.layout = layout;
 
     this.root = blessed.box({
       parent: this.screen,
@@ -95,8 +96,8 @@ class ChompyGame {
       parent: this.root,
       top: 'center',
       left: 'center',
-      width: frame.width,
-      height: frame.height,
+      width: layout.frameWidth,
+      height: layout.frameHeight,
       border: 'line',
       tags: true,
       style: {
@@ -128,10 +129,10 @@ class ChompyGame {
 
     this.boardBox = blessed.box({
       parent: this.frame,
-      top: 7,
+      top: layout.boardTop,
       left: 'center',
-      width: this.mazeWidth * this.tileWidth + 2,
-      height: this.mazeHeight + 2,
+      width: layout.boardWidth,
+      height: layout.boardHeight,
       border: 'line',
       tags: true,
       style: {
@@ -141,7 +142,7 @@ class ChompyGame {
 
     this.statusBox = blessed.box({
       parent: this.frame,
-      top: 28,
+      top: layout.statusTop,
       left: 2,
       width: '100%-4',
       height: 2,
@@ -175,8 +176,47 @@ class ChompyGame {
       },
       align: 'center',
       valign: 'middle',
-      content: `${colorize(this.design.status.tooSmall, colors.resizeTitle)}\n${colorize(this.design.status.resizeHint, colors.resizeHint)}`,
+      content: `${colorize(this.design.status.tooSmall, colors.resizeTitle)}\n${colorize(this.renderResizeHint(layout.minTerminalWidth, layout.minTerminalHeight), colors.resizeHint)}`,
     });
+  }
+
+  getLayoutMetrics() {
+    const frame = this.design.frame || {};
+    const boardWidth = this.mazeWidth * this.tileWidth + 2;
+    const boardHeight = this.mazeHeight + 2;
+    const boardTop = 7;
+    const statusTop = boardTop + boardHeight;
+    const frameWidth = Math.max(finiteNumber(frame.width, 82), boardWidth + 4);
+    const frameHeight = Math.max(finiteNumber(frame.height, 32), statusTop + 4);
+    const minTerminalWidth = Math.max(finiteNumber(frame.minTerminalWidth, frameWidth), frameWidth);
+    const minTerminalHeight = Math.max(
+      finiteNumber(frame.minTerminalHeight, frameHeight),
+      frameHeight,
+    );
+
+    return {
+      frameWidth,
+      frameHeight,
+      boardWidth,
+      boardHeight,
+      boardTop,
+      statusTop,
+      minTerminalWidth,
+      minTerminalHeight,
+    };
+  }
+
+  renderResizeHint(minWidth, minHeight) {
+    const dims = `${minWidth}x${minHeight}`;
+    const hint = String(this.design.status.resizeHint || '').trim();
+
+    if (!hint) {
+      return `Resize to at least ${dims}.`;
+    }
+    if (/\d+\s*x\s*\d+/i.test(hint)) {
+      return hint.replace(/\d+\s*x\s*\d+/i, dims);
+    }
+    return `${hint} (at least ${dims})`;
   }
 
   loadLevel() {
@@ -598,10 +638,16 @@ class ChompyGame {
   }
 
   render() {
-    const frame = this.design.frame;
+    const frame = this.design.frame || {};
+    const layout = this.layout || this.getLayoutMetrics();
+    const minWidth = Math.max(finiteNumber(frame.minTerminalWidth, layout.minTerminalWidth), layout.minTerminalWidth);
+    const minHeight = Math.max(
+      finiteNumber(frame.minTerminalHeight, layout.minTerminalHeight),
+      layout.minTerminalHeight,
+    );
     const tooSmall =
-      this.screen.width < frame.minTerminalWidth ||
-      this.screen.height < frame.minTerminalHeight;
+      this.screen.width < minWidth ||
+      this.screen.height < minHeight;
 
     if (tooSmall) {
       this.frame.hide();
@@ -735,7 +781,7 @@ class ChompyGame {
   renderWallTile(x, y) {
     const wallToken = this.getWallToken(x, y);
     return colorize(
-      tileGlyph(this.resolveWallGlyph(wallToken, x, y), this.tileWidth),
+      this.resolveWallGlyph(wallToken, x, y),
       this.resolveWallColor(wallToken, x, y),
     );
   }
@@ -748,11 +794,32 @@ class ChompyGame {
   }
 
   resolveWallGlyph(token, x, y) {
+    const connectedGlyph = this.getConnectedWallGlyph(x, y);
+    if (connectedGlyph) {
+      return connectedGlyph;
+    }
     if (token === '#') {
-      return (x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd;
+      return tileGlyph((x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd, this.tileWidth);
     }
     const glyph = typeof token === 'string' && token.length > 0 ? token : '#';
-    return glyph.length === 1 ? glyph.repeat(this.tileWidth) : glyph;
+    return glyph.length === 1 ? tileGlyph(glyph.repeat(this.tileWidth), this.tileWidth) : tileGlyph(glyph, this.tileWidth);
+  }
+
+  getConnectedWallGlyph(x, y) {
+    if (!this.isWallCell(x, y)) {
+      return null;
+    }
+
+    const up = this.isWallCell(x, y - 1);
+    const right = this.isWallCell(x + 1, y);
+    const down = this.isWallCell(x, y + 1);
+    const left = this.isWallCell(x - 1, y);
+
+    return expandWallConnectorGlyph(wallConnectorGlyph(up, right, down, left), this.tileWidth);
+  }
+
+  isWallCell(x, y) {
+    return Boolean(this.grid[y] && this.grid[y][x] === '#');
   }
 
   resolveWallColor(token, x, y) {
@@ -1139,6 +1206,76 @@ function tileGlyph(value, width) {
     return text.slice(0, width);
   }
   return text.padEnd(width, ' ');
+}
+
+function wallConnectorGlyph(up, right, down, left) {
+  const mask = (up ? 1 : 0) | (right ? 2 : 0) | (down ? 4 : 0) | (left ? 8 : 0);
+  switch (mask) {
+    case 1:
+    case 4:
+    case 5:
+      return '│';
+    case 2:
+    case 8:
+    case 10:
+      return '─';
+    case 3:
+      return '└';
+    case 6:
+      return '┌';
+    case 12:
+      return '┐';
+    case 9:
+      return '┘';
+    case 7:
+      return '├';
+    case 11:
+      return '┴';
+    case 14:
+      return '┬';
+    case 13:
+      return '┤';
+    case 15:
+      return '┼';
+    default:
+      return '■';
+  }
+}
+
+function expandWallConnectorGlyph(char, width) {
+  const connector = String(char || '■');
+  if (width <= 1) {
+    return connector;
+  }
+
+  if (connector === '─') {
+    return '─'.repeat(width);
+  }
+  if (connector === '│') {
+    return '│'.repeat(width);
+  }
+  if (connector === '┐' || connector === '┘' || connector === '┤') {
+    return `${'─'.repeat(width - 1)}${connector}`;
+  }
+  if (
+    connector === '┌' ||
+    connector === '└' ||
+    connector === '├' ||
+    connector === '┬' ||
+    connector === '┴' ||
+    connector === '┼'
+  ) {
+    return `${connector}${'─'.repeat(width - 1)}`;
+  }
+  return connector.repeat(width);
+}
+
+function finiteNumber(value, fallback) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return numeric;
+  }
+  return fallback;
 }
 
 function asArray(value, fallback) {

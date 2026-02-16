@@ -1,4 +1,13 @@
 ; SEGMENT 5 (STATIC CENTER SEGMENT)
-; Keep this one as the center chunk when procedural generation is added.
-; Design this segment as exactly 9 columns x 7 rows.
+; Keep this one as the center segment when procedural generation is added.
+; Design this segment as exactly 9 columns x 9 rows.
 ; Suggested tokens: # . o G P and space.
+####.####
+#...#...#
+#.###.#.#
+.#  G  #.
+###   ###
+.#  G  #.
+#.#.###.#
+#...#...#
+####.####
