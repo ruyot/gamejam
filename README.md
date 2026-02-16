@@ -62,6 +62,7 @@ All visual styling and ASCII art can be edited without touching game logic:
 - `assets/art/chompy-power-pellet.txt` controls power pellet source art.
 - `assets/maps/chompy-maze.txt` is the active maze source file.
 - `assets/maps/generic-bracket-maze.txt` is a bracket-style template you can iterate on.
+- `assets/maps/segments/segment-1.txt` ... `segment-9.txt` are reserved for 3x3 procedural segment design.
 
 Sprite rendering notes:
 - Maze rendering uses fixed-size map tiles.

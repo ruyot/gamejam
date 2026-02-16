@@ -1,0 +1,10 @@
+; SEGMENT 1 (example)
+; Keep each segment exactly 9 columns x 7 rows.
+; Legend: # wall, . pellet path, o power pellet, G ghost start, P player start, space walkable.
+####.####
+#...#...#
+#.#.#.#.#
+.#.....#.
+#.#.#.#.#
+#...#...#
+####.####

@@ -45,12 +45,10 @@ class MenuView {
       left: 'center',
       width: this.design.frame.width,
       height: this.design.frame.height,
-      border: 'line',
       tags: true,
       style: {
         fg: colors.frameFg,
         bg: colors.frameBg,
-        border: { fg: colors.frameBorder },
       },
     });
 
