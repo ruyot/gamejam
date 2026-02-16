@@ -3,28 +3,17 @@
 const blessed = require('blessed');
 const { loadDesignSystem, colorize } = require('../design/system');
 const { loadScores, saveScore } = require('../lib/highscore');
-
-const DIRECTIONS = {
-  up: { x: 0, y: -1 },
-  down: { x: 0, y: 1 },
-  left: { x: -1, y: 0 },
-  right: { x: 1, y: 0 },
-};
-
-const OPPOSITE_DIRECTION = {
-  up: 'down',
-  down: 'up',
-  left: 'right',
-  right: 'left',
-};
-
-const MODE_SEQUENCE = [
-  { name: 'scatter', duration: 7000 },
-  { name: 'chase', duration: 20000 },
-  { name: 'scatter', duration: 7000 },
-  { name: 'chase', duration: 20000 },
-  { name: 'random', duration: Number.POSITIVE_INFINITY },
-];
+const {
+  DIRECTIONS,
+  OPPOSITE_DIRECTION,
+  MODE_SEQUENCE,
+  DEFAULT_GHOST_PALETTE,
+} = require('./chompy/constants');
+const { getLayoutMetrics, renderResizeHint } = require('./chompy/layout');
+const { parseMaze, expandGhostStarts, pointKey } = require('./chompy/maze');
+const { chooseClosestOption, chooseFarthestOption } = require('./chompy/pathing');
+const { buildSpriteSet, pickDirectionalFrame } = require('./chompy/sprites');
+const { getWallToken, resolveWallGlyph, resolveWallColor } = require('./chompy/walls');
 
 class ChompyGame {
   constructor(screen, { onExit }) {
@@ -82,7 +71,12 @@ class ChompyGame {
 
   createLayout() {
     const colors = this.colors;
-    const layout = this.getLayoutMetrics();
+    const layout = getLayoutMetrics(
+      this.design.frame,
+      this.mazeWidth,
+      this.mazeHeight,
+      this.tileWidth,
+    );
     this.layout = layout;
 
     this.root = blessed.box({
@@ -176,47 +170,8 @@ class ChompyGame {
       },
       align: 'center',
       valign: 'middle',
-      content: `${colorize(this.design.status.tooSmall, colors.resizeTitle)}\n${colorize(this.renderResizeHint(layout.minTerminalWidth, layout.minTerminalHeight), colors.resizeHint)}`,
+      content: `${colorize(this.design.status.tooSmall, colors.resizeTitle)}\n${colorize(renderResizeHint(this.design.status.resizeHint, layout.minTerminalWidth, layout.minTerminalHeight), colors.resizeHint)}`,
     });
-  }
-
-  getLayoutMetrics() {
-    const frame = this.design.frame || {};
-    const boardWidth = this.mazeWidth * this.tileWidth + 2;
-    const boardHeight = this.mazeHeight + 2;
-    const boardTop = 7;
-    const statusTop = boardTop + boardHeight;
-    const frameWidth = Math.max(finiteNumber(frame.width, 82), boardWidth + 4);
-    const frameHeight = Math.max(finiteNumber(frame.height, 32), statusTop + 4);
-    const minTerminalWidth = Math.max(finiteNumber(frame.minTerminalWidth, frameWidth), frameWidth);
-    const minTerminalHeight = Math.max(
-      finiteNumber(frame.minTerminalHeight, frameHeight),
-      frameHeight,
-    );
-
-    return {
-      frameWidth,
-      frameHeight,
-      boardWidth,
-      boardHeight,
-      boardTop,
-      statusTop,
-      minTerminalWidth,
-      minTerminalHeight,
-    };
-  }
-
-  renderResizeHint(minWidth, minHeight) {
-    const dims = `${minWidth}x${minHeight}`;
-    const hint = String(this.design.status.resizeHint || '').trim();
-
-    if (!hint) {
-      return `Resize to at least ${dims}.`;
-    }
-    if (/\d+\s*x\s*\d+/i.test(hint)) {
-      return hint.replace(/\d+\s*x\s*\d+/i, dims);
-    }
-    return `${hint} (at least ${dims})`;
   }
 
   loadLevel() {
@@ -249,7 +204,7 @@ class ChompyGame {
     const ghostPalette =
       Array.isArray(this.design.ghostPalette) && this.design.ghostPalette.length > 0
         ? this.design.ghostPalette
-        : ['#ff5f5f', '#ff87d7', '#5fd7ff', '#ffaf5f'];
+        : DEFAULT_GHOST_PALETTE;
     const ghostStarts = expandGhostStarts(this.maze.ghostStarts, this.grid);
     this.ghosts = ghostStarts.map((start, index) => ({
       id: index + 1,
@@ -638,16 +593,12 @@ class ChompyGame {
   }
 
   render() {
-    const frame = this.design.frame || {};
-    const layout = this.layout || this.getLayoutMetrics();
-    const minWidth = Math.max(finiteNumber(frame.minTerminalWidth, layout.minTerminalWidth), layout.minTerminalWidth);
-    const minHeight = Math.max(
-      finiteNumber(frame.minTerminalHeight, layout.minTerminalHeight),
-      layout.minTerminalHeight,
-    );
+    const layout =
+      this.layout ||
+      getLayoutMetrics(this.design.frame, this.mazeWidth, this.mazeHeight, this.tileWidth);
     const tooSmall =
-      this.screen.width < minWidth ||
-      this.screen.height < minHeight;
+      this.screen.width < layout.minTerminalWidth ||
+      this.screen.height < layout.minTerminalHeight;
 
     if (tooSmall) {
       this.frame.hide();
@@ -779,61 +730,18 @@ class ChompyGame {
   }
 
   renderWallTile(x, y) {
-    const wallToken = this.getWallToken(x, y);
+    const wallToken = getWallToken(this.wallGrid, x, y);
     return colorize(
-      this.resolveWallGlyph(wallToken, x, y),
-      this.resolveWallColor(wallToken, x, y),
+      resolveWallGlyph({
+        grid: this.grid,
+        tileWidth: this.tileWidth,
+        glyphs: this.glyphs,
+        wallToken,
+        x,
+        y,
+      }),
+      resolveWallColor({ colors: this.colors, wallToken, x, y }),
     );
-  }
-
-  getWallToken(x, y) {
-    if (!this.wallGrid || !this.wallGrid[y]) {
-      return '#';
-    }
-    return this.wallGrid[y][x] || '#';
-  }
-
-  resolveWallGlyph(token, x, y) {
-    const connectedGlyph = this.getConnectedWallGlyph(x, y);
-    if (connectedGlyph) {
-      return connectedGlyph;
-    }
-    if (token === '#') {
-      return tileGlyph((x + y) % 2 === 0 ? this.glyphs.wallEven : this.glyphs.wallOdd, this.tileWidth);
-    }
-    const glyph = typeof token === 'string' && token.length > 0 ? token : '#';
-    return glyph.length === 1 ? tileGlyph(glyph.repeat(this.tileWidth), this.tileWidth) : tileGlyph(glyph, this.tileWidth);
-  }
-
-  getConnectedWallGlyph(x, y) {
-    if (!this.isWallCell(x, y)) {
-      return null;
-    }
-
-    const up = this.isWallCell(x, y - 1);
-    const right = this.isWallCell(x + 1, y);
-    const down = this.isWallCell(x, y + 1);
-    const left = this.isWallCell(x - 1, y);
-
-    return expandWallConnectorGlyph(wallConnectorGlyph(up, right, down, left), this.tileWidth);
-  }
-
-  isWallCell(x, y) {
-    return Boolean(this.grid[y] && this.grid[y][x] === '#');
-  }
-
-  resolveWallColor(token, x, y) {
-    const tokenPalette = this.colors.wallByToken;
-    if (tokenPalette && typeof tokenPalette === 'object') {
-      const tokenColor = tokenPalette[token];
-      if (tokenColor !== undefined && tokenColor !== null && tokenColor !== '') {
-        return tokenColor;
-      }
-    }
-    if (token === '#') {
-      return (x + y) % 2 === 0 ? this.colors.wallEven : this.colors.wallOdd;
-    }
-    return this.colors.wallOdd;
   }
 
   bumpHighScore() {
@@ -877,419 +785,6 @@ class ChompyGame {
       this.root = null;
     }
   }
-}
-
-function parseMaze(template, legend) {
-  const wallTokens = new Set(asArray(legend.wall, ['#']));
-  const pelletToken = asString(legend.pellet, '.');
-  const powerPelletToken = asString(legend.powerPellet, 'o');
-  const playerToken = asString(legend.playerStart, 'P');
-  const ghostToken = asString(legend.ghostStart, 'G');
-  const width = template.reduce((max, line) => Math.max(max, line.length), 0);
-  const rows = template.map((line) => line.padEnd(width, ' '));
-
-  const grid = [];
-  const wallGrid = [];
-  const pellets = new Set();
-  const powerPellets = new Set();
-  const ghostStarts = [];
-  let playerStart = null;
-
-  for (let y = 0; y < rows.length; y += 1) {
-    grid[y] = [];
-    wallGrid[y] = [];
-    for (let x = 0; x < width; x += 1) {
-      const char = rows[y][x];
-      if (wallTokens.has(char)) {
-        grid[y][x] = '#';
-        wallGrid[y][x] = char;
-        continue;
-      }
-
-      grid[y][x] = ' ';
-      wallGrid[y][x] = null;
-      const key = pointKey(x, y);
-      if (char === pelletToken) {
-        pellets.add(key);
-      } else if (char === powerPelletToken) {
-        powerPellets.add(key);
-      } else if (char === playerToken) {
-        playerStart = { x, y };
-      } else if (char === ghostToken) {
-        ghostStarts.push({ x, y });
-      }
-    }
-  }
-
-  if (!playerStart) {
-    playerStart = findFirstWalkable(grid);
-  }
-
-  return {
-    width,
-    height: rows.length,
-    grid,
-    wallGrid,
-    pellets,
-    powerPellets,
-    playerStart,
-    ghostStarts,
-  };
-}
-
-function findFirstWalkable(grid) {
-  for (let y = 0; y < grid.length; y += 1) {
-    for (let x = 0; x < grid[y].length; x += 1) {
-      if (grid[y][x] !== '#') {
-        return { x, y };
-      }
-    }
-  }
-  return { x: 1, y: 1 };
-}
-
-function expandGhostStarts(starts, grid) {
-  const height = grid.length;
-  const width = grid[0].length;
-  const centerX = Math.floor(width / 2);
-  const centerY = Math.floor(height / 2);
-
-  const result = starts.map((start) => ({ x: start.x, y: start.y }));
-  const candidates = [
-    { x: centerX - 1, y: centerY },
-    { x: centerX + 1, y: centerY },
-    { x: centerX, y: centerY - 1 },
-    { x: centerX, y: centerY + 1 },
-    { x: centerX, y: centerY },
-  ];
-
-  for (const candidate of candidates) {
-    if (result.length >= 4) {
-      break;
-    }
-    if (isWalkableInGrid(grid, candidate.x, candidate.y)) {
-      result.push(candidate);
-    }
-  }
-
-  if (result.length === 0) {
-    result.push({ x: centerX, y: centerY });
-  }
-
-  while (result.length < 4) {
-    result.push({ ...result[result.length - 1] });
-  }
-
-  return result.slice(0, 4);
-}
-
-function isWalkableInGrid(grid, x, y) {
-  return grid[y] && grid[y][x] !== '#';
-}
-
-function chooseClosestOption(options, targetX, targetY) {
-  return options.reduce((best, option) => {
-    const distance = manhattan(option.x, option.y, targetX, targetY);
-    if (!best || distance < best.distance || (distance === best.distance && Math.random() < 0.35)) {
-      return { ...option, distance };
-    }
-    return best;
-  }, null);
-}
-
-function chooseFarthestOption(options, targetX, targetY) {
-  return options.reduce((best, option) => {
-    const distance = manhattan(option.x, option.y, targetX, targetY);
-    if (!best || distance > best.distance || (distance === best.distance && Math.random() < 0.35)) {
-      return { ...option, distance };
-    }
-    return best;
-  }, null);
-}
-
-function manhattan(ax, ay, bx, by) {
-  return Math.abs(ax - bx) + Math.abs(ay - by);
-}
-
-function pointKey(x, y) {
-  return `${x},${y}`;
-}
-
-function pickDirectionalFrame(sprite, direction, frameCounter, divisor) {
-  if (!sprite) {
-    return '?';
-  }
-  const frames = sprite[direction] || sprite.right;
-  if (!Array.isArray(frames) || frames.length === 0) {
-    return '?';
-  }
-  if (frames.length === 1) {
-    return frames[0];
-  }
-  const index = Math.floor(frameCounter / divisor) % frames.length;
-  return frames[index];
-}
-
-function buildSpriteSet(glyphs, tileWidth) {
-  return {
-    player: buildDirectionalSprite(glyphs.playerFrames, tileWidth, glyphs.playerDirectional),
-    ghostNormal: buildDirectionalSprite(
-      glyphs.ghostNormal,
-      tileWidth,
-      glyphs.ghostNormalDirectional,
-    ),
-    ghostReleased: buildDirectionalSprite(glyphs.ghostReleased, tileWidth),
-    ghostFrightened: buildDirectionalSprite(glyphs.ghostFrightenedFrames, tileWidth),
-    pellet: buildDirectionalSprite(glyphs.pellet, tileWidth),
-    powerPellet: buildDirectionalSprite(glyphs.powerPelletFrames, tileWidth),
-  };
-}
-
-function buildDirectionalSprite(lines, tileWidth, overrides) {
-  const frames = splitArtFrames(lines);
-  const rightFrames = frames.map((frame) => artToTile(frame, tileWidth, 'horizontal'));
-  const leftFrames = frames.map((frame) =>
-    artToTile(mirrorArt(frame), tileWidth, 'horizontal'),
-  );
-  const upFrames = frames.map((frame) => artToTile(flipArt(frame), tileWidth, 'vertical'));
-  const downFrames = frames.map((frame) =>
-    artToTile(mirrorArt(flipArt(frame)), tileWidth, 'vertical'),
-  );
-
-  const overrideRight = compileOverrideFrames(overrides && overrides.right, tileWidth);
-  const overrideLeft = compileOverrideFrames(overrides && overrides.left, tileWidth);
-  const overrideUp = compileOverrideFrames(overrides && overrides.up, tileWidth);
-  const overrideDown = compileOverrideFrames(overrides && overrides.down, tileWidth);
-
-  return {
-    right: overrideRight || rightFrames,
-    left: overrideLeft || leftFrames,
-    up: overrideUp || upFrames,
-    down: overrideDown || downFrames,
-  };
-}
-
-function compileOverrideFrames(lines, tileWidth) {
-  if (!Array.isArray(lines) || lines.length === 0) {
-    return null;
-  }
-  return splitArtFrames(lines).map((frame) => artToTile(frame, tileWidth, 'horizontal'));
-}
-
-function splitArtFrames(lines) {
-  if (!Array.isArray(lines) || lines.length === 0) {
-    return [['?']];
-  }
-  const normalized = lines.map((line) => String(line));
-  const isSingleCharFrameList = normalized.every(
-    (line) => line.length > 0 && line.length <= 3 && !/\s/.test(line),
-  );
-  if (isSingleCharFrameList && normalized.length > 1) {
-    return normalized.map((line) => [line]);
-  }
-  return [normalized];
-}
-
-function artToTile(lines, tileWidth, mode) {
-  const matrix = normalizeArt(lines);
-  if (matrix.length === 0 || matrix[0].length === 0) {
-    return tileGlyph(' ', tileWidth);
-  }
-  if (mode === 'vertical' && tileWidth >= 2) {
-    const topDensity = regionDensity(matrix, 0, matrix[0].length, 0, Math.ceil(matrix.length / 2));
-    const bottomDensity = regionDensity(
-      matrix,
-      0,
-      matrix[0].length,
-      Math.floor(matrix.length / 2),
-      matrix.length,
-    );
-    const pair = [densityToGlyph(topDensity), densityToGlyph(bottomDensity)].join('');
-    return tileGlyph(pair, tileWidth);
-  }
-
-  const chunkWidth = matrix[0].length / tileWidth;
-  let output = '';
-  for (let index = 0; index < tileWidth; index += 1) {
-    const startX = Math.floor(index * chunkWidth);
-    const endX = Math.floor((index + 1) * chunkWidth);
-    const density = regionDensity(matrix, startX, Math.max(startX + 1, endX), 0, matrix.length);
-    output += densityToGlyph(density);
-  }
-  return tileGlyph(output, tileWidth);
-}
-
-function normalizeArt(lines) {
-  const withoutTopBottomBlanks = trimVertical(lines.map((line) => String(line)));
-  if (withoutTopBottomBlanks.length === 0) {
-    return [];
-  }
-
-  const charRows = withoutTopBottomBlanks.map((line) => Array.from(line));
-  let minX = Number.POSITIVE_INFINITY;
-  let maxX = -1;
-
-  for (const row of charRows) {
-    for (let index = 0; index < row.length; index += 1) {
-      if (isInk(row[index])) {
-        minX = Math.min(minX, index);
-        maxX = Math.max(maxX, index);
-      }
-    }
-  }
-
-  if (maxX < minX) {
-    return [];
-  }
-
-  const width = maxX - minX + 1;
-  return charRows.map((row) => {
-    const cropped = row.slice(minX, maxX + 1);
-    while (cropped.length < width) {
-      cropped.push(' ');
-    }
-    return cropped;
-  });
-}
-
-function trimVertical(lines) {
-  let start = 0;
-  let end = lines.length;
-  while (start < end && lines[start].trim().length === 0) {
-    start += 1;
-  }
-  while (end > start && lines[end - 1].trim().length === 0) {
-    end -= 1;
-  }
-  return lines.slice(start, end);
-}
-
-function mirrorArt(lines) {
-  return lines.map((line) => Array.from(line).reverse().join(''));
-}
-
-function flipArt(lines) {
-  return lines.slice().reverse();
-}
-
-function regionDensity(matrix, startX, endX, startY, endY) {
-  let filled = 0;
-  let total = 0;
-  for (let y = Math.max(0, startY); y < Math.min(matrix.length, endY); y += 1) {
-    for (let x = Math.max(0, startX); x < Math.min(matrix[y].length, endX); x += 1) {
-      total += 1;
-      if (isInk(matrix[y][x])) {
-        filled += 1;
-      }
-    }
-  }
-  return total > 0 ? filled / total : 0;
-}
-
-function isInk(char) {
-  return char !== ' ' && char !== '\t';
-}
-
-function densityToGlyph(value) {
-  if (value <= 0.05) return ' ';
-  if (value <= 0.2) return '.';
-  if (value <= 0.35) return ':';
-  if (value <= 0.5) return '=';
-  if (value <= 0.7) return '+';
-  if (value <= 0.85) return '*';
-  return '#';
-}
-
-function tileGlyph(value, width) {
-  const text = String(value || '');
-  if (text.length >= width) {
-    return text.slice(0, width);
-  }
-  return text.padEnd(width, ' ');
-}
-
-function wallConnectorGlyph(up, right, down, left) {
-  const mask = (up ? 1 : 0) | (right ? 2 : 0) | (down ? 4 : 0) | (left ? 8 : 0);
-  switch (mask) {
-    case 1:
-    case 4:
-    case 5:
-      return '│';
-    case 2:
-    case 8:
-    case 10:
-      return '─';
-    case 3:
-      return '└';
-    case 6:
-      return '┌';
-    case 12:
-      return '┐';
-    case 9:
-      return '┘';
-    case 7:
-      return '├';
-    case 11:
-      return '┴';
-    case 14:
-      return '┬';
-    case 13:
-      return '┤';
-    case 15:
-      return '┼';
-    default:
-      return '■';
-  }
-}
-
-function expandWallConnectorGlyph(char, width) {
-  const connector = String(char || '■');
-  if (width <= 1) {
-    return connector;
-  }
-
-  if (connector === '─') {
-    return '─'.repeat(width);
-  }
-  if (connector === '│') {
-    return '│'.repeat(width);
-  }
-  if (connector === '┐' || connector === '┘' || connector === '┤') {
-    return `${'─'.repeat(width - 1)}${connector}`;
-  }
-  if (
-    connector === '┌' ||
-    connector === '└' ||
-    connector === '├' ||
-    connector === '┬' ||
-    connector === '┴' ||
-    connector === '┼'
-  ) {
-    return `${connector}${'─'.repeat(width - 1)}`;
-  }
-  return connector.repeat(width);
-}
-
-function finiteNumber(value, fallback) {
-  const numeric = Number(value);
-  if (Number.isFinite(numeric)) {
-    return numeric;
-  }
-  return fallback;
-}
-
-function asArray(value, fallback) {
-  if (Array.isArray(value) && value.length > 0) {
-    return value;
-  }
-  return fallback;
-}
-
-function asString(value, fallback) {
-  if (typeof value === 'string' && value.length > 0) {
-    return value;
-  }
-  return fallback;
 }
 
 module.exports = {
