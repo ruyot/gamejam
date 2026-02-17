@@ -92,12 +92,10 @@ class ChompyGame {
       left: 'center',
       width: layout.frameWidth,
       height: layout.frameHeight,
-      border: 'line',
       tags: true,
       style: {
         fg: colors.frameFg,
         bg: colors.frameBg,
-        border: { fg: colors.frameBorder },
       },
     });
 
@@ -108,6 +106,7 @@ class ChompyGame {
       width: '100%-4',
       height: 1,
       tags: true,
+      transparent: true,
       align: 'center',
       content: colorize(this.design.title, colors.title),
     });
@@ -119,6 +118,7 @@ class ChompyGame {
       width: '100%-4',
       height: 2,
       tags: true,
+      transparent: true,
     });
 
     this.boardBox = blessed.box({
@@ -127,11 +127,7 @@ class ChompyGame {
       left: 'center',
       width: layout.boardWidth,
       height: layout.boardHeight,
-      border: 'line',
       tags: true,
-      style: {
-        border: { fg: colors.boardBorder },
-      },
     });
 
     this.statusBox = blessed.box({
@@ -141,6 +137,7 @@ class ChompyGame {
       width: '100%-4',
       height: 2,
       tags: true,
+      transparent: true,
       align: 'center',
     });
 
@@ -151,6 +148,7 @@ class ChompyGame {
       width: '100%-4',
       height: 1,
       tags: true,
+      transparent: true,
       align: 'center',
       content: this.renderControlsHint(),
     });

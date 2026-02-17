@@ -1,9 +1,9 @@
 'use strict';
 
 function getLayoutMetrics(frame, mazeWidth, mazeHeight, tileWidth) {
-  const boardWidth = mazeWidth * tileWidth + 2;
-  const boardHeight = mazeHeight + 2;
-  const boardTop = 7;
+  const boardWidth = mazeWidth * tileWidth;
+  const boardHeight = mazeHeight;
+  const boardTop = 6;
   const statusTop = boardTop + boardHeight;
   const frameWidth = Math.max(finiteNumber(frame && frame.width, 82), boardWidth + 4);
   const frameHeight = Math.max(finiteNumber(frame && frame.height, 32), statusTop + 4);
