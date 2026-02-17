@@ -63,29 +63,29 @@ function wallConnectorGlyph(up, right, down, left) {
     case 1:
     case 4:
     case 5:
-      return '│';
+      return '┃';
     case 2:
     case 8:
     case 10:
-      return '─';
+      return '━';
     case 3:
-      return '└';
+      return '┗';
     case 6:
-      return '┌';
+      return '┏';
     case 12:
-      return '┐';
+      return '┓';
     case 9:
-      return '┘';
+      return '┛';
     case 7:
-      return '├';
+      return '┣';
     case 11:
-      return '┴';
+      return '┻';
     case 14:
-      return '┬';
+      return '┳';
     case 13:
-      return '┤';
+      return '┫';
     case 15:
-      return '┼';
+      return '╋';
     default:
       return '■';
   }
@@ -97,24 +97,24 @@ function expandWallConnectorGlyph(char, width) {
     return connector;
   }
 
-  if (connector === '─') {
-    return '─'.repeat(width);
+  if (connector === '━') {
+    return '━'.repeat(width);
   }
-  if (connector === '│') {
-    return '│'.repeat(width);
+  if (connector === '┃') {
+    return '┃'.repeat(width);
   }
-  if (connector === '┐' || connector === '┘' || connector === '┤') {
-    return `${'─'.repeat(width - 1)}${connector}`;
+  if (connector === '┓' || connector === '┛' || connector === '┫') {
+    return `${'━'.repeat(width - 1)}${connector}`;
   }
   if (
-    connector === '┌' ||
-    connector === '└' ||
-    connector === '├' ||
-    connector === '┬' ||
-    connector === '┴' ||
-    connector === '┼'
+    connector === '┏' ||
+    connector === '┗' ||
+    connector === '┣' ||
+    connector === '┳' ||
+    connector === '┻' ||
+    connector === '╋'
   ) {
-    return `${connector}${'─'.repeat(width - 1)}`;
+    return `${connector}${'━'.repeat(width - 1)}`;
   }
   return connector.repeat(width);
 }
