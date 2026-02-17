@@ -119,6 +119,7 @@ class ChompyGame {
       height: 2,
       tags: true,
       transparent: true,
+      align: 'center',
     });
 
     this.boardBox = blessed.box({
