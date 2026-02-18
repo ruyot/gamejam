@@ -1,13 +1,18 @@
 'use strict';
 
+const { isWallChar } = require('./walls');
+
 function parseMaze(template, legend) {
-  const wallTokens = new Set(asArray(legend.wall, ['#']));
   const pelletToken = asString(legend.pellet, '.');
   const powerPelletToken = asString(legend.powerPellet, 'o');
   const playerToken = asString(legend.playerStart, 'P');
   const ghostToken = asString(legend.ghostStart, 'G');
-  const width = template.reduce((max, line) => Math.max(max, line.length), 0);
-  const rows = template.map((line) => line.padEnd(width, ' '));
+  const width = template.reduce((max, line) => Math.max(max, [...line].length), 0);
+  const rows = template.map((line) => {
+    const chars = [...line];
+    while (chars.length < width) chars.push(' ');
+    return chars;
+  });
 
   const grid = [];
   const wallGrid = [];
@@ -21,7 +26,7 @@ function parseMaze(template, legend) {
     wallGrid[y] = [];
     for (let x = 0; x < width; x += 1) {
       const char = rows[y][x];
-      if (wallTokens.has(char)) {
+      if (isWallChar(char)) {
         grid[y][x] = '#';
         wallGrid[y][x] = char;
         continue;
