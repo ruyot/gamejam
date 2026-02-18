@@ -1,12 +1,34 @@
-; SEGMENT 1 (example)
-; Keep each segment exactly 9 columns x 9 rows.
-; Legend: # wall, . pellet path, o power pellet, G ghost start, P player start, space walkable.
-####.####
-#...#...#
-#.#.#.#.#
-.#.....#.
-###...###
-.#.....#.
-#.#.#.#.#
-#...#...#
-####.####
+; ┌─ CORNERS ──────────────────────────────────┐
+; │  ┏  top-left      ┓  top-right             │
+; │  ┗  bottom-left   ┛  bottom-right          │
+; └────────────────────────────────────────────┘
+;
+; ┌─ STRAIGHTS ─────────────────────────────────┐
+; │  ━  horizontal    ┃  vertical               │
+; └─────────────────────────────────────────────┘
+;
+; ┌─ T-JUNCTIONS ───────────────────────────────┐
+; │  ┳  T down        ┻  T up                   │
+; │  ┣  T right       ┫  T left                 │
+; └─────────────────────────────────────────────┘
+;
+; ┌─ CROSS ─────────────────────────────────────┐
+; │  ╋  4-way cross                             │
+; └─────────────────────────────────────────────┘
+;
+; ┌─ SPECIAL ───────────────────────────────────┐
+; │  .  pellet        o  power pellet           │
+; │  P  player start  G  ghost start            │
+; │  (space)  open path                         │
+; └─────────────────────────────────────────────┘
+;
+; EXAMPLE 9x9 SEGMENT (edit below):
+┏━━━┳━━━┓
+┃...┃...┃
+┃.┏━┛.┏━┫
+┃.┃...┃.┃
+┣━┛.┏━┛.┃
+┃...┃...┃
+┃.┏━┻━┓.┃
+┃.┃...┃.┃
+┗━┻━━━┻━┛
