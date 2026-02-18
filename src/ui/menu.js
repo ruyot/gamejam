@@ -45,23 +45,13 @@ class MenuView {
       left: 'center',
       width: this.design.frame.width,
       height: this.design.frame.height,
+      border: 'line',
       tags: true,
       style: {
         fg: colors.frameFg,
         bg: colors.frameBg,
+        border: { fg: colors.frameBorder },
       },
-    });
-
-    this.frameArtBox = blessed.box({
-      parent: this.frame,
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      tags: true,
-      align: 'left',
-      valign: 'top',
-      content: this.renderFrameArt(),
     });
 
     this.titleBox = blessed.box({
@@ -71,6 +61,7 @@ class MenuView {
       width: '100%-4',
       height: 8,
       tags: true,
+      transparent: true,
       align: 'center',
       content: '',
     });
@@ -82,6 +73,7 @@ class MenuView {
       width: '100%-4',
       height: 2,
       tags: true,
+      transparent: true,
       align: 'center',
       content: colorize(this.design.subtitle, colors.subtitle),
     });
@@ -93,33 +85,24 @@ class MenuView {
       width: 30,
       height: 7,
       tags: true,
+      transparent: true,
       align: 'left',
     });
 
     this.hintBox = blessed.box({
       parent: this.frame,
-      bottom: 3,
+      bottom: 2,
       left: 2,
       width: '100%-4',
       height: 2,
       tags: true,
+      transparent: true,
       align: 'center',
       content: [
         colorize(this.design.hints.navigate, colors.hintNavigate),
         colorize(this.design.hints.select, colors.hintSelect),
         colorize(this.design.hints.quit, colors.hintQuit),
       ].join('  '),
-    });
-
-    this.bottomBorder = blessed.box({
-      parent: this.frame,
-      bottom: 1,
-      left: 0,
-      width: '100%',
-      height: 1,
-      tags: true,
-      align: 'center',
-      content: colorize(this.design.bottomRule, colors.bottomRule),
     });
   }
 
