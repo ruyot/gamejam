@@ -1,3 +1,29 @@
 ; SEGMENT 6
 ; Design this segment as exactly 9 columns x 9 rows.
 ; Suggested tokens: # . o G P and space.
+
+
+
+; ┌─ CORNERS ──────────────────────────────────┐
+; │  ┛ top-left      ┓  top-right              │
+; │  ┗  bottom-left   ┛  bottom-right         │
+; └────────────────────────────────────────────┘
+;
+; ┌─ STRAIGHTS ─────────────────────────────────┐
+; │  ━  horizontal    ┃  vertical               │
+; └─────────────────────────────────────────────┘
+;
+; ┌─ T-JUNCTIONS ───────────────────────────────┐
+; │  ┳  T down        ┻  T up                   │
+; │  ┣  T right       ┫  T left                 │
+; └─────────────────────────────────────────────┘
+;
+; ┌─ CROSS ─────────────────────────────────────┐
+; │  ╋  4-way cross                             │
+; └─────────────────────────────────────────────┘
+;
+; ┌─ SPECIAL ───────────────────────────────────┐
+; │  .  pellet        o  power pellet           │
+; │  P  player start  G  ghost start            │
+; │  (space)  open path                         │
+; └─────────────────────────────────────────────┘
