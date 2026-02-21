@@ -1,3 +1,10 @@
-; SEGMENT 9
-; Design this segment as exactly 9 columns x 9 rows.
-; Suggested tokens: # . o G P and space.
+┏━━━━━━━┓
+┃.......┃
+┃.......┃
+┃.......┃
+┃.......┃
+┃.......┃
+┃.......┃
+┃.......┃
+┃.......┃
+┗━━━━━━━┛
