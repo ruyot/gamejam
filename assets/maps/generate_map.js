@@ -10,7 +10,12 @@
  *   [ B          ]  [ 8 (center) ]  [ flipH(B)    ]
  *   [ flipV(C)   ]  [ flipV(D)   ]  [ flipHV(C)   ]
  *
- * Usage:  node generate_map.js [--seed N]
+ * Borders are stripped based on grid position so segments merge seamlessly:
+ *   - Corners keep their 2 outer walls only
+ *   - Edges keep their 1 outward-facing wall only
+ *   - Center keeps no walls
+ *
+ * Usage:  node generate_map.js
  */
 
 const fs = require('node:fs');
@@ -44,11 +49,10 @@ const VERTICAL_MIRROR = {
 function loadSegment(n) {
     const filePath = path.join(SEGMENTS_DIR, `segment-${n}.txt`);
     const raw = fs.readFileSync(filePath, 'utf8');
-    const lines = raw
+    return raw
         .replace(/\r/g, '')
         .split('\n')
         .filter((l) => l.length > 0 && !l.trimStart().startsWith(';'));
-    return lines;
 }
 
 function flipHorizontal(lines) {
@@ -60,11 +64,9 @@ function flipHorizontal(lines) {
 }
 
 function flipVertical(lines) {
-    const reversed = [...lines].reverse();
-    return reversed.map((line) => {
-        const chars = [...line];
-        return chars.map((ch) => VERTICAL_MIRROR[ch] || ch).join('');
-    });
+    return [...lines].reverse().map((line) =>
+        [...line].map((ch) => VERTICAL_MIRROR[ch] || ch).join('')
+    );
 }
 
 function flipBoth(lines) {
@@ -82,6 +84,43 @@ function padLines(lines, width, height) {
         padded.push(' '.repeat(width));
     }
     return padded;
+}
+
+/**
+ * Strip borders from a segment based on its position in the 3×3 grid.
+ *
+ *   Grid position determines which walls to KEEP:
+ *     row 0 → keep top,    row 2 → keep bottom,   row 1 → keep neither
+ *     col 0 → keep left,   col 2 → keep right,    col 1 → keep neither
+ *
+ *   "Strip" means:
+ *     - top:    remove first row entirely
+ *     - bottom: remove last row entirely
+ *     - left:   remove first character of each remaining row
+ *     - right:  remove last character of each remaining row
+ */
+function stripBorders(lines, gridRow, gridCol) {
+    let result = [...lines];
+
+    // Vertical stripping (rows)
+    const keepTop = gridRow === 0;
+    const keepBottom = gridRow === 2;
+
+    if (!keepBottom) result = result.slice(0, -1);   // strip bottom row
+    if (!keepTop) result = result.slice(1);        // strip top row
+
+    // Horizontal stripping (columns)
+    const keepLeft = gridCol === 0;
+    const keepRight = gridCol === 2;
+
+    result = result.map((line) => {
+        const chars = [...line];
+        if (!keepRight) chars.pop();     // strip right column
+        if (!keepLeft) chars.shift();   // strip left column
+        return chars.join('');
+    });
+
+    return result;
 }
 
 function shuffle(arr) {
@@ -108,44 +147,44 @@ function generateMap() {
     const rawD = loadSegment(segD);
     const rawCenter = loadSegment(CENTER_SEGMENT);
 
-    // Determine uniform tile size from segment files
-    const segWidth = Math.max(
-        ...[rawA, rawB, rawC, rawD, rawCenter].map(
-            (seg) => seg.reduce((max, l) => Math.max(max, [...l].length), 0)
-        )
-    );
-    const segHeight = Math.max(
-        ...[rawA, rawB, rawC, rawD, rawCenter].map((seg) => seg.length)
-    );
+    // Determine uniform tile size
+    const allRaw = [rawA, rawB, rawC, rawD, rawCenter];
+    const segWidth = Math.max(...allRaw.map(
+        (seg) => seg.reduce((max, l) => Math.max(max, [...l].length), 0)
+    ));
+    const segHeight = Math.max(...allRaw.map((seg) => seg.length));
 
-    // Pad all segments to uniform size
+    // Pad all to uniform size, then apply mirroring
     const A = padLines(rawA, segWidth, segHeight);
     const B = padLines(rawB, segWidth, segHeight);
     const C = padLines(rawC, segWidth, segHeight);
     const D = padLines(rawD, segWidth, segHeight);
     const center = padLines(rawCenter, segWidth, segHeight);
 
-    // Build the 3×3 grid with mirroring
+    // Build full 3×3 grid (before border stripping)
     //
     //   [ A        ]  [ D        ]  [ flipH(A)  ]
     //   [ B        ]  [  center  ]  [ flipH(B)  ]
     //   [ flipV(C) ]  [ flipV(D) ]  [ flipHV(C) ]
 
-    const grid = [
+    const rawGrid = [
         [A, D, flipHorizontal(A)],
         [B, center, flipHorizontal(B)],
         [flipVertical(C), flipVertical(D), flipBoth(C)],
     ];
 
+    // Strip borders based on position
+    const strippedGrid = rawGrid.map((row, r) =>
+        row.map((seg, c) => stripBorders(seg, r, c))
+    );
+
     // Stitch rows
     const outputLines = [];
     for (let row = 0; row < 3; row++) {
-        for (let lineIdx = 0; lineIdx < segHeight; lineIdx++) {
-            outputLines.push(
-                grid[row][0][lineIdx] +
-                grid[row][1][lineIdx] +
-                grid[row][2][lineIdx]
-            );
+        const segs = strippedGrid[row];
+        const rowHeight = segs[0].length; // all segs in same row have same height
+        for (let lineIdx = 0; lineIdx < rowHeight; lineIdx++) {
+            outputLines.push(segs.map((s) => s[lineIdx]).join(''));
         }
     }
 
@@ -153,10 +192,10 @@ function generateMap() {
     console.log();
     console.log('┌──────────────────────────────────────────────┐');
     console.log('│         GENERATED SYMMETRIC MAP              │');
-    console.log('│  5 unique segments + mirroring               │');
+    console.log('│  5 unique segments · borders merged          │');
     console.log('└──────────────────────────────────────────────┘');
     console.log();
-    console.log(`  Segments used: A=${segA}  B=${segB}  C=${segC}  D=${segD}  center=8`);
+    console.log(`  Segments: A=${segA}  B=${segB}  C=${segC}  D=${segD}  center=8`);
     console.log();
     console.log(`  Layout:`);
     console.log(`    [ seg-${segA} ]  [ seg-${segD} ]  [ seg-${segA}H ]`);
@@ -164,13 +203,12 @@ function generateMap() {
     console.log(`    [ seg-${segC}V]  [ seg-${segD}V]  [ seg-${segC}HV]`);
     console.log();
 
-    // Print map
     for (const line of outputLines) {
         console.log('  ' + line);
     }
     console.log();
 
-    // Also write to file for later use
+    // Save to file
     const outPath = path.join(__dirname, 'generated-map.txt');
     fs.writeFileSync(outPath, outputLines.join('\n') + '\n', 'utf8');
     console.log(`  Map saved to: ${outPath}`);
