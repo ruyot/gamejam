@@ -182,13 +182,30 @@ function generateMap() {
     const outputLines = [];
     for (let row = 0; row < 3; row++) {
         const segs = strippedGrid[row];
-        const rowHeight = segs[0].length; // all segs in same row have same height
+        const rowHeight = segs[0].length;
         for (let lineIdx = 0; lineIdx < rowHeight; lineIdx++) {
             outputLines.push(segs.map((s) => s[lineIdx]).join(''));
         }
     }
 
-    // Print header
+    const mapWidth = [...outputLines[0]].length;
+    const extraRow = '┃' + '.'.repeat(mapWidth - 2) + '┃';
+    outputLines.splice(outputLines.length - 1, 0, extraRow);
+
+    const lastRow = outputLines.length - 1;
+    const edgeGap = Math.floor(lastRow / 4);
+    const tunnelRows = [
+        edgeGap,                                       
+        Math.floor((edgeGap + (lastRow - edgeGap)) / 2), 
+        lastRow - edgeGap,                                 
+    ];
+
+    for (const row of tunnelRows) {
+        const chars = [...outputLines[row]];
+        chars[0] = ' ';
+        chars[chars.length - 1] = ' ';
+        outputLines[row] = chars.join('');
+    }
     console.log();
     console.log('┌──────────────────────────────────────────────┐');
     console.log('│         GENERATED SYMMETRIC MAP              │');
@@ -208,7 +225,6 @@ function generateMap() {
     }
     console.log();
 
-    // Save to file
     const outPath = path.join(__dirname, 'generated-map.txt');
     fs.writeFileSync(outPath, outputLines.join('\n') + '\n', 'utf8');
     console.log(`  Map saved to: ${outPath}`);
