@@ -97,33 +97,24 @@ const DEFAULT_DESIGN = {
         ghostStart: 'G',
       },
     },
-    glyphFiles: {
-      playerFrames: 'art/chompy-player.txt',
-      playerRightFrames: 'art/chompy-player-right.txt',
-      playerLeftFrames: 'art/chompy-player-left.txt',
-      playerUpFrames: 'art/chompy-player-up.txt',
-      playerDownFrames: 'art/chompy-player-down.txt',
-      ghostNormal: 'art/chompy-ghost-normal.txt',
-      ghostRightFrames: 'art/chompy-ghost-right.txt',
-      ghostLeftFrames: 'art/chompy-ghost-left.txt',
-      ghostUpFrames: 'art/chompy-ghost-up.txt',
-      ghostDownFrames: 'art/chompy-ghost-down.txt',
-      ghostReleased: 'art/chompy-ghost-released.txt',
-      ghostFrightenedFrames: 'art/chompy-ghost-frightened.txt',
-      pellet: 'art/chompy-pellet.txt',
-      powerPelletFrames: 'art/chompy-power-pellet.txt',
-    },
+    glyphFiles: {},
     glyphs: {
-      playerFrames: ['C', 'O'],
-      ghostNormal: ['M'],
-      ghostReleased: ['m'],
-      ghostFrightenedFrames: ['w', 'W'],
-      pellet: ['.'],
-      powerPelletFrames: ['o', 'O'],
+      playerFrames: ['>'],
+      playerDirectional: {
+        right: ['>'],
+        left: ['<'],
+        up: ['v'],
+        down: ['^'],
+      },
+      ghostNormal: ['ᗣ'],
+      ghostReleased: ['ᗣ'],
+      ghostFrightenedFrames: ['ᗣ', 'ᗣ'],
+      pellet: ['·'],
+      powerPelletFrames: ['●', '○'],
       wallEven: '#',
       wallOdd: '%',
-      lifeFull: '*',
-      lifeEmpty: '-',
+      lifeFull: '>',
+      lifeEmpty: '·',
     },
     colors: {
       screenBg: 16,
@@ -209,10 +200,14 @@ function loadDesignSystem() {
         asArray(glyphs.playerFrames, DEFAULT_DESIGN.chompy.glyphs.playerFrames),
       ),
       playerDirectional: {
-        right: optionalTextLines(resolveAssetPath(glyphFiles.playerRightFrames)),
-        left: optionalTextLines(resolveAssetPath(glyphFiles.playerLeftFrames)),
-        up: optionalTextLines(resolveAssetPath(glyphFiles.playerUpFrames)),
-        down: optionalTextLines(resolveAssetPath(glyphFiles.playerDownFrames)),
+        right: optionalTextLines(resolveAssetPath(glyphFiles.playerRightFrames))
+          || asOptionalArray(glyphs.playerDirectional && glyphs.playerDirectional.right),
+        left: optionalTextLines(resolveAssetPath(glyphFiles.playerLeftFrames))
+          || asOptionalArray(glyphs.playerDirectional && glyphs.playerDirectional.left),
+        up: optionalTextLines(resolveAssetPath(glyphFiles.playerUpFrames))
+          || asOptionalArray(glyphs.playerDirectional && glyphs.playerDirectional.up),
+        down: optionalTextLines(resolveAssetPath(glyphFiles.playerDownFrames))
+          || asOptionalArray(glyphs.playerDirectional && glyphs.playerDirectional.down),
       },
       ghostNormal: readTextLines(
         resolveAssetPath(glyphFiles.ghostNormal),
@@ -353,6 +348,13 @@ function cloneUnknown(value) {
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function asOptionalArray(value) {
+  if (Array.isArray(value) && value.length > 0) {
+    return value.map((item) => String(item));
+  }
+  return null;
 }
 
 function asArray(value, fallbackValue) {

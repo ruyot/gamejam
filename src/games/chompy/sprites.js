@@ -31,15 +31,32 @@ function buildSpriteSet(glyphs, tileWidth) {
 }
 
 function buildDirectionalSprite(lines, tileWidth, overrides) {
-  const frames = splitArtFrames(lines);
-  const rightFrames = frames.map((frame) => artToTile(frame, tileWidth, 'horizontal'));
-  const leftFrames = frames.map((frame) =>
-    artToTile(mirrorArt(frame), tileWidth, 'horizontal'),
+  // If the frames are simple glyphs (short strings, no whitespace),
+  // pad them directly instead of running through density analysis.
+  const normalized = (lines || []).map((line) => String(line));
+  const isSimple = normalized.length > 0 && normalized.every(
+    (line) => line.length > 0 && line.length <= 3 && !/\s/.test(line),
   );
-  const upFrames = frames.map((frame) => artToTile(flipArt(frame), tileWidth, 'vertical'));
-  const downFrames = frames.map((frame) =>
-    artToTile(mirrorArt(flipArt(frame)), tileWidth, 'vertical'),
-  );
+
+  let rightFrames, leftFrames, upFrames, downFrames;
+
+  if (isSimple) {
+    const padded = normalized.map((frame) => tileGlyph(frame, tileWidth));
+    rightFrames = padded;
+    leftFrames = padded;
+    upFrames = padded;
+    downFrames = padded;
+  } else {
+    const frames = splitArtFrames(lines);
+    rightFrames = frames.map((frame) => artToTile(frame, tileWidth, 'horizontal'));
+    leftFrames = frames.map((frame) =>
+      artToTile(mirrorArt(frame), tileWidth, 'horizontal'),
+    );
+    upFrames = frames.map((frame) => artToTile(flipArt(frame), tileWidth, 'vertical'));
+    downFrames = frames.map((frame) =>
+      artToTile(mirrorArt(flipArt(frame)), tileWidth, 'vertical'),
+    );
+  }
 
   const overrideRight = compileOverrideFrames(overrides && overrides.right, tileWidth);
   const overrideLeft = compileOverrideFrames(overrides && overrides.left, tileWidth);
@@ -57,6 +74,15 @@ function buildDirectionalSprite(lines, tileWidth, overrides) {
 function compileOverrideFrames(lines, tileWidth) {
   if (!Array.isArray(lines) || lines.length === 0) {
     return null;
+  }
+  // If every entry is a short string (≤3 chars, no whitespace), treat them as
+  // direct glyph frames — pad to tileWidth and return without density analysis.
+  const normalized = lines.map((line) => String(line));
+  const isSimpleGlyphs = normalized.every(
+    (line) => line.length > 0 && line.length <= 3 && !/\s/.test(line),
+  );
+  if (isSimpleGlyphs) {
+    return normalized.map((frame) => tileGlyph(frame, tileWidth));
   }
   return splitArtFrames(lines).map((frame) => artToTile(frame, tileWidth, 'horizontal'));
 }

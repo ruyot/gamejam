@@ -37,11 +37,23 @@
     "title": "[ CHOMPY ]",
     "controlsHint": "[Arrows/WASD] Move  [P/Space] Pause  [R] Restart  [Q/Esc] Menu",
     "tileWidth": 2,
-    "ghostPalette": ["#ff4d6d", "#ff7edb", "#00e5ff", "#ff9e00"],
+    "ghostPalette": [
+      "#ff4d6d",
+      "#ff7edb",
+      "#00e5ff",
+      "#ff9e00"
+    ],
     "maze": {
       "file": "maps/generic-bracket-maze.txt",
       "legend": {
-        "wall": ["#", "[", "]", "|", "+", "-"],
+        "wall": [
+          "#",
+          "[",
+          "]",
+          "|",
+          "+",
+          "-"
+        ],
         "pellet": ".",
         "powerPellet": "o",
         "playerStart": "P",
@@ -90,21 +102,43 @@
         "#": "#3a86ff"
       }
     },
-    "glyphFiles": {
-      "playerFrames": "art/chompy-player.txt",
-      "playerRightFrames": "art/chompy-player-right.txt",
-      "playerLeftFrames": "art/chompy-player-left.txt",
-      "playerUpFrames": "art/chompy-player-up.txt",
-      "playerDownFrames": "art/chompy-player-down.txt",
-      "ghostNormal": "art/chompy-ghost-normal.txt",
-      "ghostRightFrames": "art/chompy-ghost-right.txt",
-      "ghostLeftFrames": "art/chompy-ghost-left.txt",
-      "ghostUpFrames": "art/chompy-ghost-up.txt",
-      "ghostDownFrames": "art/chompy-ghost-down.txt",
-      "ghostReleased": "art/chompy-ghost-released.txt",
-      "ghostFrightenedFrames": "art/chompy-ghost-frightened.txt",
-      "pellet": "art/chompy-pellet.txt",
-      "powerPelletFrames": "art/chompy-power-pellet.txt"
+    "glyphs": {
+      "playerFrames": [
+        ">"
+      ],
+      "playerDirectional": {
+        "right": [
+          ">"
+        ],
+        "left": [
+          "<"
+        ],
+        "up": [
+          "v"
+        ],
+        "down": [
+          "^"
+        ]
+      },
+      "ghostNormal": [
+        "ᗣ"
+      ],
+      "ghostReleased": [
+        "ᗣ"
+      ],
+      "ghostFrightenedFrames": [
+        "ᗣ",
+        "ᗣ"
+      ],
+      "pellet": [
+        "·"
+      ],
+      "powerPelletFrames": [
+        "●",
+        "○"
+      ],
+      "lifeFull": ">",
+      "lifeEmpty": "·"
     }
   }
 }
