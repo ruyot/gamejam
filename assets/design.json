@@ -44,15 +44,20 @@
       "#ff9e00"
     ],
     "maze": {
-      "file": "maps/generic-bracket-maze.txt",
+      "file": "maps/generated-map.txt",
       "legend": {
         "wall": [
-          "#",
-          "[",
-          "]",
-          "|",
-          "+",
-          "-"
+          "┏",
+          "━",
+          "┓",
+          "┃",
+          "┗",
+          "┛",
+          "┣",
+          "┫",
+          "┳",
+          "┻",
+          "╋"
         ],
         "pellet": ".",
         "powerPellet": "o",
