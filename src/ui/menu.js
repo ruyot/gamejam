@@ -50,7 +50,7 @@ class MenuView {
       style: {
         fg: colors.frameFg,
         bg: colors.frameBg,
-        border: { fg: colors.frameBorder },
+        border: { fg: colors.frameBorder, bg: colors.frameBg },
       },
     });
 

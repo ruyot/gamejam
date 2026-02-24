@@ -21,7 +21,7 @@ class App {
     this.setView(
       new MenuView(this.screen, {
         onStartChompy: () => this.startChompy(),
-        onComingSoon: (label) => this.showToast(`${label} is coming soon.`),
+        onComingSoon: () => this.showToast('Coming Soon'),
         onQuit: () => this.exit(0),
       }),
     );
@@ -59,7 +59,7 @@ class App {
       style: {
         fg: 15,
         bg: 16,
-        border: { fg: 15 },
+        border: { fg: 15, bg: 16 },
       },
       content: `{#ffffff-fg}${message}{/}`,
     });
