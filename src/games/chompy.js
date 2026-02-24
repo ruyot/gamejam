@@ -129,6 +129,9 @@ class ChompyGame {
       width: layout.boardWidth,
       height: layout.boardHeight,
       tags: true,
+      style: {
+        bg: colors.frameBg,
+      },
     });
 
     this.statusBox = blessed.box({

@@ -99,10 +99,10 @@ const DEFAULT_DESIGN = {
     },
     glyphFiles: {},
     glyphs: {
-      playerFrames: ['>'],
+      playerFrames: ['<'],
       playerDirectional: {
-        right: ['>'],
-        left: ['<'],
+        right: ['<'],
+        left: ['>'],
         up: ['v'],
         down: ['^'],
       },
