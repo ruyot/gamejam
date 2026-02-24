@@ -56,7 +56,7 @@ class MenuView {
 
     this.titleBox = blessed.box({
       parent: this.frame,
-      top: 1,
+      top: 3,
       left: 2,
       width: '100%-4',
       height: 8,
@@ -68,7 +68,7 @@ class MenuView {
 
     this.subtitleBox = blessed.box({
       parent: this.frame,
-      top: 9,
+      top: 11,
       left: 2,
       width: '100%-4',
       height: 2,
@@ -80,7 +80,7 @@ class MenuView {
 
     this.menuBox = blessed.box({
       parent: this.frame,
-      top: 12,
+      top: 14,
       left: 'center',
       width: 30,
       height: 7,
