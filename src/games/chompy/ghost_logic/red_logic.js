@@ -1,9 +1,9 @@
 'use strict';
 
-const { chooseClosestOption, chooseFarthestOption } = require('./pathing');
+const { chooseClosestOption, chooseFarthestOption } = require('../pathing');
 
 /**
- * Blue ghost (Inky) — flanker / wildcard.
+ * Red ghost (Blinky) — aggressive chaser.
  * TODO: Implement unique targeting logic.
  *
  * @param {object} ghost      - The ghost entity { x, y, dir, scatterTarget, ... }

@@ -11,10 +11,10 @@ const {
 } = require('./chompy/constants');
 const { getLayoutMetrics, renderResizeHint } = require('./chompy/layout');
 const { parseMaze, expandGhostStarts, pointKey } = require('./chompy/maze');
-const redPath = require('./chompy/red_logic');
-const pinkPath = require('./chompy/pink_logic');
-const bluePath = require('./chompy/blue_logic');
-const yellowPath = require('./chompy/yellow_logic');
+const redPath = require('./chompy/ghost_logic/red_logic');
+const pinkPath = require('./chompy/ghost_logic/pink_logic');
+const bluePath = require('./chompy/ghost_logic/blue_logic');
+const yellowPath = require('./chompy/ghost_logic/yellow_logic');
 const { buildSpriteSet, pickDirectionalFrame } = require('./chompy/sprites');
 const { getWallToken, resolveWallGlyph, resolveWallColor } = require('./chompy/walls');
 

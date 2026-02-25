@@ -1,9 +1,9 @@
 'use strict';
 
-const { chooseClosestOption, chooseFarthestOption } = require('./pathing');
+const { chooseClosestOption, chooseFarthestOption } = require('../pathing');
 
 /**
- * Pink ghost (Pinky) — ambusher / cut-off.
+ * Blue ghost (Inky) — flanker / wildcard.
  * TODO: Implement unique targeting logic.
  *
  * @param {object} ghost      - The ghost entity { x, y, dir, scatterTarget, ... }

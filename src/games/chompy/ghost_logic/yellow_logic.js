@@ -1,6 +1,6 @@
 'use strict';
 
-const { chooseClosestOption, chooseFarthestOption } = require('./pathing');
+const { chooseClosestOption, chooseFarthestOption } = require('../pathing');
 
 /**
  * Yellow ghost (Clyde) — shy / erratic.

@@ -2,6 +2,7 @@
 
 const blessed = require('blessed');
 const { loadDesignSystem, colorize } = require('../design/system');
+const { loadChaseSprites } = require('./chase_sprites');
 
 const MENU_ITEMS = [
   { id: 'chompy', label: 'Chompy' },
@@ -24,7 +25,9 @@ class MenuView {
 
   mount() {
     this.createLayout();
+    this.createChaseLayer();
     this.startTitleAnimation();
+    this.startChaseAnimation();
     this.render();
     this.screen.on('keypress', this.onKeypress);
   }
@@ -104,6 +107,167 @@ class MenuView {
         colorize(this.design.hints.quit, colors.hintQuit),
       ].join('  '),
     });
+  }
+
+  createChaseLayer() {
+    const SPRITE_ROWS = 5;
+    const SPRITE_COLS = 12;
+    this.chaseSprites = loadChaseSprites(SPRITE_ROWS, SPRITE_COLS);
+
+    const termH = this.screen.rows;
+    const frameH = this.design.frame.height;
+    const frameTop = Math.floor((termH - frameH) / 2);
+    const laneHeight = SPRITE_ROWS;
+
+    // Bottom lane (scene 1: ghosts chasing Chompy right)
+    const bottomTop = frameTop + frameH + 1;
+    this.chaseLaneBottom = blessed.box({
+      parent: this.root,
+      top: bottomTop,
+      left: 0,
+      width: '100%',
+      height: laneHeight,
+      tags: true,
+      style: { bg: 16 },
+    });
+
+    // Top lane (scene 2: Chompy chasing frightened ghosts left)
+    const topTop = Math.max(0, frameTop - laneHeight - 1);
+    this.chaseLaneTop = blessed.box({
+      parent: this.root,
+      top: topTop,
+      left: 0,
+      width: '100%',
+      height: laneHeight,
+      tags: true,
+      style: { bg: 16 },
+    });
+
+    this.chaseState = {
+      scene: 0,
+      x: 0,
+      termW: this.screen.cols,
+      spriteRows: SPRITE_ROWS,
+      spriteCols: SPRITE_COLS,
+      pauseCounter: 0,
+    };
+  }
+
+  startChaseAnimation() {
+    this.stopChaseAnimation();
+    const s = this.chaseState;
+    s.termW = this.screen.cols;
+    s.scene = 0;
+    s.x = -60;
+    s.pauseCounter = 0;
+
+    this.chaseTimer = setInterval(() => {
+      this.tickChase();
+      this.screen.render();
+    }, 80);
+  }
+
+  stopChaseAnimation() {
+    if (this.chaseTimer) {
+      clearInterval(this.chaseTimer);
+      this.chaseTimer = null;
+    }
+  }
+
+  tickChase() {
+    const s = this.chaseState;
+    s.termW = this.screen.cols;
+    const sp = this.chaseSprites;
+    const gap = 2;
+
+    if (s.scene === 0) {
+      // Scene 1: moving right across bottom
+      s.x += 1;
+      if (s.x > s.termW + 10) {
+        s.scene = 1;
+        s.pauseCounter = 0;
+        this.chaseLaneBottom.setContent('');
+        return;
+      }
+      this.renderChaseScene1(s.x);
+    } else if (s.scene === 1) {
+      s.pauseCounter++;
+      if (s.pauseCounter > 40) {
+        s.scene = 2;
+        s.x = s.termW + 10;
+      }
+    } else if (s.scene === 2) {
+      // Scene 2: moving left across top
+      s.x -= 1;
+      const totalWidth = (sp.ghostFrightened.width + gap) * 3 + sp.playerLeft.width;
+      if (s.x < -totalWidth - 10) {
+        s.scene = 3;
+        s.pauseCounter = 0;
+        this.chaseLaneTop.setContent('');
+        return;
+      }
+      this.renderChaseScene2(s.x);
+    } else if (s.scene === 3) {
+      s.pauseCounter++;
+      if (s.pauseCounter > 40) {
+        s.scene = 0;
+        s.x = -60;
+      }
+    }
+  }
+
+  renderChaseScene1(baseX) {
+    const sp = this.chaseSprites;
+    const gap = 2;
+    const colors = ['#ffea00', '#ff4d6d', '#ff7edb', '#00e5ff'];
+    // Ghosts chasing from behind, Chompy in front
+    const sprites = [
+      { sprite: sp.ghostRight, color: colors[1] },
+      { sprite: sp.ghostRight, color: colors[2] },
+      { sprite: sp.ghostRight, color: colors[3] },
+      { sprite: sp.playerRight, color: colors[0] },
+    ];
+    this.renderSpriteRow(sprites, baseX, gap, this.chaseLaneBottom);
+  }
+
+  renderChaseScene2(baseX) {
+    const sp = this.chaseSprites;
+    const gap = 2;
+    const playerColor = '#ffea00';
+    const frightenedColor = '#4169ff';
+    // Frightened ghosts fleeing in front, Chompy chasing from behind (last)
+    const sprites = [
+      { sprite: sp.ghostFrightened, color: frightenedColor },
+      { sprite: sp.ghostFrightened, color: frightenedColor },
+      { sprite: sp.ghostFrightened, color: frightenedColor },
+      { sprite: sp.playerLeft, color: playerColor },
+    ];
+    this.renderSpriteRow(sprites, baseX, gap, this.chaseLaneTop);
+  }
+
+  renderSpriteRow(sprites, baseX, gap, lane) {
+    const s = this.chaseState;
+    const rows = [];
+    for (let r = 0; r < s.spriteRows; r++) {
+      rows.push(new Array(s.termW).fill(' '));
+    }
+
+    let offsetX = 0;
+    for (const { sprite, color } of sprites) {
+      for (let r = 0; r < sprite.lines.length; r++) {
+        const line = sprite.lines[r];
+        for (let c = 0; c < line.length; c++) {
+          const screenX = baseX + offsetX + c;
+          if (screenX >= 0 && screenX < s.termW && line[c] !== ' ') {
+            rows[r][screenX] = `{${color}-fg}${escapeTagChar(line[c])}{/}`;
+          }
+        }
+      }
+      offsetX += sprite.width + gap;
+    }
+
+    const content = rows.map((row) => row.join('')).join('\n');
+    lane.setContent(content);
   }
 
   render() {
@@ -244,6 +408,7 @@ class MenuView {
   destroy() {
     this.screen.off('keypress', this.onKeypress);
     this.stopTitleAnimation();
+    this.stopChaseAnimation();
     if (this.root) {
       this.root.destroy();
       this.root = null;
