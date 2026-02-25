@@ -11,7 +11,10 @@ const {
 } = require('./chompy/constants');
 const { getLayoutMetrics, renderResizeHint } = require('./chompy/layout');
 const { parseMaze, expandGhostStarts, pointKey } = require('./chompy/maze');
-const { chooseClosestOption, chooseFarthestOption } = require('./chompy/pathing');
+const redAI = require('./chompy/red_logic');
+const pinkAI = require('./chompy/pink_logic');
+const blueAI = require('./chompy/blue_logic');
+const yellowAI = require('./chompy/yellow_logic');
 const { buildSpriteSet, pickDirectionalFrame } = require('./chompy/sprites');
 const { getWallToken, resolveWallGlyph, resolveWallColor } = require('./chompy/walls');
 
@@ -208,6 +211,7 @@ class ChompyGame {
         ? this.design.ghostPalette
         : DEFAULT_GHOST_PALETTE;
     const ghostStarts = expandGhostStarts(this.maze.ghostStarts, this.grid);
+    const GHOST_AI = [redAI, pinkAI, blueAI, yellowAI];
     this.ghosts = ghostStarts.map((start, index) => ({
       id: index + 1,
       x: start.x,
@@ -218,9 +222,11 @@ class ChompyGame {
       color: ghostPalette[index % ghostPalette.length],
       scatterTarget: corners[index % corners.length],
       releaseDelay: index * 350,
+      ai: GHOST_AI[index % GHOST_AI.length],
     }));
 
     this.playerStepMs = Math.max(70, 130 - (this.level - 1) * 5);
+    this.playerStepMsH = Math.round(this.playerStepMs * 0.55);
     this.ghostStepMs = Math.max(80, 155 - (this.level - 1) * 6);
 
     this.modeIndex = 0;
@@ -285,9 +291,11 @@ class ChompyGame {
       }
     }
 
+    const isHorizontal = this.player.dir === 'left' || this.player.dir === 'right';
+    const stepMs = isHorizontal ? this.playerStepMsH : Math.round(this.playerStepMsH * 1.8);
     this.playerAccumulator += dt;
-    while (this.playerAccumulator >= this.playerStepMs) {
-      this.playerAccumulator -= this.playerStepMs;
+    while (this.playerAccumulator >= stepMs) {
+      this.playerAccumulator -= stepMs;
       this.stepPlayer();
       if (this.state !== 'running') {
         return;
@@ -338,23 +346,17 @@ class ChompyGame {
     }
 
     const mode = this.getCurrentGhostMode();
-    let selected;
+    const selected = ghost.ai.chooseMove(ghost, {
+      player: this.player,
+      mode,
+      options,
+    });
 
-    if (mode === 'frightened') {
-      selected = chooseFarthestOption(options, this.player.x, this.player.y);
-    } else if (mode === 'random') {
-      selected = options[Math.floor(Math.random() * options.length)];
-    } else {
-      const target =
-        mode === 'chase'
-          ? { x: this.player.x, y: this.player.y }
-          : { x: ghost.scatterTarget.x, y: ghost.scatterTarget.y };
-      selected = chooseClosestOption(options, target.x, target.y);
+    if (selected) {
+      ghost.x = selected.x;
+      ghost.y = selected.y;
+      ghost.dir = selected.dir;
     }
-
-    ghost.x = selected.x;
-    ghost.y = selected.y;
-    ghost.dir = selected.dir;
   }
 
   consumeAtPlayer() {
