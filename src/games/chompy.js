@@ -11,10 +11,10 @@ const {
 } = require('./chompy/constants');
 const { getLayoutMetrics, renderResizeHint } = require('./chompy/layout');
 const { parseMaze, expandGhostStarts, pointKey } = require('./chompy/maze');
-const redAI = require('./chompy/red_logic');
-const pinkAI = require('./chompy/pink_logic');
-const blueAI = require('./chompy/blue_logic');
-const yellowAI = require('./chompy/yellow_logic');
+const redPath = require('./chompy/red_logic');
+const pinkPath = require('./chompy/pink_logic');
+const bluePath = require('./chompy/blue_logic');
+const yellowPath = require('./chompy/yellow_logic');
 const { buildSpriteSet, pickDirectionalFrame } = require('./chompy/sprites');
 const { getWallToken, resolveWallGlyph, resolveWallColor } = require('./chompy/walls');
 
@@ -211,7 +211,7 @@ class ChompyGame {
         ? this.design.ghostPalette
         : DEFAULT_GHOST_PALETTE;
     const ghostStarts = expandGhostStarts(this.maze.ghostStarts, this.grid);
-    const GHOST_AI = [redAI, pinkAI, blueAI, yellowAI];
+    const GHOST_AI = [redPath, pinkPath, bluePath, yellowPath];
     this.ghosts = ghostStarts.map((start, index) => ({
       id: index + 1,
       x: start.x,
