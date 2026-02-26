@@ -39,8 +39,8 @@
     "tileWidth": 1,
     "ghostPalette": [
       "#ff4d6d",
-      "#ff7edb",
       "#00e5ff",
+      "#ff7edb",
       "#ff9e00"
     ],
     "maze": {
