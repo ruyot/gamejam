@@ -38,6 +38,7 @@ class ChompyGame {
     this.level = 1;
     this.score = 0;
     this.lives = 3;
+    this._nextLifeScore = 10000;
 
     const scores = loadScores();
     this.highScore = Number(scores.chompy || 0);
@@ -365,11 +366,11 @@ class ChompyGame {
     let consumed = false;
 
     if (this.pellets.delete(key)) {
-      this.score += 10;
+      this.addScore(10);
       consumed = true;
     }
     if (this.powerPellets.delete(key)) {
-      this.score += 50;
+      this.addScore(50);
       this.powerTimer = 8000;
       this.ghostCombo = 0;
       this.statusText = 'Power mode active.';
@@ -398,7 +399,7 @@ class ChompyGame {
       if (this.powerTimer > 0) {
         const points = 200 * 2 ** Math.min(this.ghostCombo, 3);
         this.ghostCombo += 1;
-        this.score += points;
+        this.addScore(points);
         this.bumpHighScore();
         ghost.x = ghost.startX;
         ghost.y = ghost.startY;
@@ -451,11 +452,12 @@ class ChompyGame {
   }
 
   finishLevel() {
-    this.score += 500;
+    this.addScore(500);
     this.bumpHighScore();
     this.level += 1;
+    this.lives += 1;
     this.state = 'level-clear';
-    this.statusText = `Level clear. Bonus +500. Loading level ${this.level}...`;
+    this.statusText = `level ${this.level}`;
 
     if (this.pendingTimer) {
       clearTimeout(this.pendingTimer);
@@ -470,10 +472,21 @@ class ChompyGame {
     }, 1400);
   }
 
+  addScore(points) {
+    this.score += points;
+    if (this.score >= this._nextLifeScore) {
+      this.lives += 1;
+      this._nextLifeScore += 10000;
+      this.statusText = 'Extra life!';
+      this.ringBell();
+    }
+  }
+
   restartGame() {
     this.level = 1;
     this.score = 0;
     this.lives = 3;
+    this._nextLifeScore = 10000;
     this.statusText = 'Fresh run.';
     this.loadLevel();
   }
