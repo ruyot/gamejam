@@ -210,7 +210,7 @@ class ChompyGame {
       Array.isArray(this.design.ghostPalette) && this.design.ghostPalette.length > 0
         ? this.design.ghostPalette
         : DEFAULT_GHOST_PALETTE;
-    const ghostStarts = expandGhostStarts(this.maze.ghostStarts, this.grid).slice(0, 2); // TODO: re-enable all ghosts after testing
+    const ghostStarts = expandGhostStarts(this.maze.ghostStarts, this.grid).slice(0, 3); // TODO: re-enable all ghosts after testing
     const GHOST_AI = [redPath, bluePath, pinkPath, yellowPath];
     this.ghosts = ghostStarts.map((start, index) => ({
       id: index + 1,
