@@ -302,6 +302,39 @@ class MenuView {
       style: { bg: colors.frameBg },
     });
 
+    this.settingsHeader = blessed.box({
+      parent: this.settingsOverlay,
+      top: 2,
+      left: 0,
+      width: '100%',
+      height: 3,
+      tags: true,
+      transparent: true,
+      align: 'center',
+    });
+
+    this.settingsItems = blessed.box({
+      parent: this.settingsOverlay,
+      top: 6,
+      left: 'center',
+      width: 24,
+      height: 4,
+      tags: true,
+      transparent: true,
+      align: 'left',
+    });
+
+    this.settingsHint = blessed.box({
+      parent: this.settingsOverlay,
+      bottom: 1,
+      left: 0,
+      width: '100%',
+      height: 1,
+      tags: true,
+      transparent: true,
+      align: 'center',
+    });
+
     this.renderSettings();
     this.screen.render();
   }
@@ -311,6 +344,9 @@ class MenuView {
     if (this.settingsOverlay) {
       this.settingsOverlay.destroy();
       this.settingsOverlay = null;
+      this.settingsHeader = null;
+      this.settingsItems = null;
+      this.settingsHint = null;
     }
     this.render();
   }
@@ -319,32 +355,24 @@ class MenuView {
     if (!this.settingsOverlay) return;
     const colors = this.design.colors;
 
+    const header = colorize('Settings', colors.selected);
+    const separator = colorize('─'.repeat(20), colors.frameBorder);
+    this.settingsHeader.setContent(`${header}\n${separator}`);
+
     const items = [
       { label: `Sound: ${this.soundEnabled ? 'ON' : 'OFF'}` },
       { label: 'Back' },
     ];
-
-    const header = colorize('Settings', colors.selected);
-    const separator = colorize('─'.repeat(20), colors.frameBorder);
-
     const lines = items.map((item, i) => {
       const cursor = i === this.settingsIndex ? '▶' : ' ';
       const color = i === this.settingsIndex ? colors.selected : colors.default;
-      return `  ${colorize(cursor, colors.selected)} ${colorize(item.label, color)}`;
+      return `${colorize(cursor, colors.selected)} ${colorize(item.label, color)}`;
     });
+    this.settingsItems.setContent(lines.join('\n'));
 
-    const content = [
-      '',
-      `  ${header}`,
-      `  ${separator}`,
-      '',
-      ...lines,
-      '',
-      '',
-      `  ${colorize('[↑↓] Navigate  [Enter] Toggle  [Esc] Back', colors.hintNavigate)}`,
-    ].join('\n');
-
-    this.settingsOverlay.setContent(content);
+    this.settingsHint.setContent(
+      colorize('[↑↓] Navigate  [Enter] Toggle  [Esc] Back', colors.hintNavigate),
+    );
   }
 
   handleSettingsKey(input) {
