@@ -8,6 +8,7 @@ const MENU_ITEMS = [
   { id: 'snake', label: 'Snake', comingSoon: true },
   { id: 'tetris', label: 'Tetris', comingSoon: true },
   { id: 'space-invaders', label: 'Space Invaders', comingSoon: true },
+  { id: 'settings', label: 'Settings' },
   { id: 'quit', label: 'Quit' },
 ];
 
@@ -20,6 +21,9 @@ class MenuView {
     this.titleTimer = null;
     this.design = loadDesignSystem().menu;
     this.onKeypress = this.onKeypress.bind(this);
+    this.inSettings = false;
+    this.settingsIndex = 0;
+    this.soundEnabled = true;
   }
 
   mount() {
@@ -210,6 +214,10 @@ class MenuView {
 
   onKeypress(ch, key) {
     const input = (key && key.name) || ch;
+    if (this.inSettings) {
+      this.handleSettingsKey(input);
+      return;
+    }
     if (input === 'up' || input === 'w') {
       this.selectedIndex = (this.selectedIndex - 1 + MENU_ITEMS.length) % MENU_ITEMS.length;
       this.render();
@@ -239,7 +247,100 @@ class MenuView {
       this.actions.onQuit();
       return;
     }
+    if (selected.id === 'settings') {
+      this.openSettings();
+      return;
+    }
     this.actions.onComingSoon(selected.label);
+  }
+
+  openSettings() {
+    this.inSettings = true;
+    this.settingsIndex = 0;
+
+    const colors = this.design.colors;
+    this.settingsOverlay = blessed.box({
+      parent: this.frame,
+      top: 1,
+      left: 1,
+      width: '100%-2',
+      height: '100%-2',
+      tags: true,
+      style: { bg: colors.frameBg },
+    });
+
+    this.renderSettings();
+    this.screen.render();
+  }
+
+  closeSettings() {
+    this.inSettings = false;
+    if (this.settingsOverlay) {
+      this.settingsOverlay.destroy();
+      this.settingsOverlay = null;
+    }
+    this.render();
+  }
+
+  renderSettings() {
+    if (!this.settingsOverlay) return;
+    const colors = this.design.colors;
+
+    const items = [
+      { label: `Sound: ${this.soundEnabled ? 'ON' : 'OFF'}` },
+      { label: 'Back' },
+    ];
+
+    const header = colorize('Settings', colors.selected);
+    const separator = colorize('─'.repeat(20), colors.frameBorder);
+
+    const lines = items.map((item, i) => {
+      const cursor = i === this.settingsIndex ? '▶' : ' ';
+      const color = i === this.settingsIndex ? colors.selected : colors.default;
+      return `  ${colorize(cursor, colors.selected)} ${colorize(item.label, color)}`;
+    });
+
+    const content = [
+      '',
+      `  ${header}`,
+      `  ${separator}`,
+      '',
+      ...lines,
+      '',
+      '',
+      `  ${colorize('[↑↓] Navigate  [Enter] Toggle  [Esc] Back', colors.hintNavigate)}`,
+    ].join('\n');
+
+    this.settingsOverlay.setContent(content);
+  }
+
+  handleSettingsKey(input) {
+    const itemCount = 2; // sound + back
+    if (input === 'up' || input === 'w') {
+      this.settingsIndex = (this.settingsIndex - 1 + itemCount) % itemCount;
+      this.renderSettings();
+      this.screen.render();
+      return;
+    }
+    if (input === 'down' || input === 's') {
+      this.settingsIndex = (this.settingsIndex + 1) % itemCount;
+      this.renderSettings();
+      this.screen.render();
+      return;
+    }
+    if (input === 'enter') {
+      if (this.settingsIndex === 0) {
+        this.soundEnabled = !this.soundEnabled;
+        this.renderSettings();
+        this.screen.render();
+      } else {
+        this.closeSettings();
+      }
+      return;
+    }
+    if (input === 'escape' || input === 'q') {
+      this.closeSettings();
+    }
   }
 
   destroy() {
