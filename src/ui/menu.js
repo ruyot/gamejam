@@ -3,14 +3,19 @@
 const blessed = require('blessed');
 const { loadDesignSystem, colorize } = require('../design/system');
 
-const MENU_ITEMS = [
+const GAME_ITEMS = [
   { id: 'chompy', label: 'Chompy' },
   { id: 'snake', label: 'Snake', comingSoon: true },
   { id: 'tetris', label: 'Tetris', comingSoon: true },
   { id: 'space-invaders', label: 'Space Invaders', comingSoon: true },
+];
+
+const UTIL_ITEMS = [
   { id: 'settings', label: 'Settings' },
   { id: 'quit', label: 'Quit' },
 ];
+
+const ALL_ITEMS = [...GAME_ITEMS, ...UTIL_ITEMS];
 
 class MenuView {
   constructor(screen, actions) {
@@ -82,12 +87,23 @@ class MenuView {
       content: colorize(this.design.subtitle, colors.subtitle),
     });
 
-    this.menuBox = blessed.box({
+    this.menuBoxLeft = blessed.box({
       parent: this.frame,
       top: 14,
-      left: 'center',
-      width: 30,
-      height: 7,
+      left: 11,
+      width: 28,
+      height: GAME_ITEMS.length + 1,
+      tags: true,
+      transparent: true,
+      align: 'left',
+    });
+
+    this.menuBoxRight = blessed.box({
+      parent: this.frame,
+      top: 14,
+      right: 3,
+      width: 20,
+      height: UTIL_ITEMS.length + 1,
       tags: true,
       transparent: true,
       align: 'left',
@@ -95,7 +111,7 @@ class MenuView {
 
     this.hintBox = blessed.box({
       parent: this.frame,
-      bottom: 2,
+      bottom: 1,
       left: 2,
       width: '100%-4',
       height: 2,
@@ -110,28 +126,31 @@ class MenuView {
     });
   }
 
-
   render() {
     const colors = this.design.colors;
     this.updateTitleArt();
 
-    const lines = MENU_ITEMS.map((item, index) => {
-      const isSelected = index === this.selectedIndex;
-      const cursor = isSelected
-        ? this.design.selectedCursor
-        : this.design.unselectedCursor;
-      const labelColor = isSelected
-        ? colors.selected
-        : item.comingSoon
-          ? colors.comingSoon
-          : colors.default;
-      const suffix = item.comingSoon
-        ? `  ${colorize(this.design.comingSoonSuffix, colors.comingSoonSuffix)}`
-        : '';
-      return `${colorize(cursor, colors.selected)} ${colorize(item.label, labelColor)}${suffix}`;
-    });
+    const renderItems = (items, startIndex, dimUnselected) => {
+      return items.map((item, i) => {
+        const globalIndex = startIndex + i;
+        const isSelected = globalIndex === this.selectedIndex;
+        const cursor = isSelected
+          ? this.design.selectedCursor
+          : dimUnselected ? ' ' : this.design.unselectedCursor;
+        const labelColor = isSelected
+          ? colors.selected
+          : item.comingSoon
+            ? colors.comingSoon
+            : dimUnselected ? colors.comingSoon : colors.default;
+        const suffix = item.comingSoon
+          ? `  ${colorize(this.design.comingSoonSuffix, colors.comingSoonSuffix)}`
+          : '';
+        return `${colorize(cursor, colors.selected)} ${colorize(item.label, labelColor)}${suffix}`;
+      });
+    };
 
-    this.menuBox.setContent(lines.join('\n'));
+    this.menuBoxLeft.setContent(renderItems(GAME_ITEMS, 0, false).join('\n'));
+    this.menuBoxRight.setContent(renderItems(UTIL_ITEMS, GAME_ITEMS.length, true).join('\n'));
     this.screen.render();
   }
 
@@ -219,13 +238,27 @@ class MenuView {
       return;
     }
     if (input === 'up' || input === 'w') {
-      this.selectedIndex = (this.selectedIndex - 1 + MENU_ITEMS.length) % MENU_ITEMS.length;
+      this.selectedIndex = (this.selectedIndex - 1 + ALL_ITEMS.length) % ALL_ITEMS.length;
       this.render();
       return;
     }
     if (input === 'down' || input === 's') {
-      this.selectedIndex = (this.selectedIndex + 1) % MENU_ITEMS.length;
+      this.selectedIndex = (this.selectedIndex + 1) % ALL_ITEMS.length;
       this.render();
+      return;
+    }
+    if (input === 'left') {
+      if (this.selectedIndex >= GAME_ITEMS.length) {
+        this.selectedIndex = 0;
+        this.render();
+      }
+      return;
+    }
+    if (input === 'right') {
+      if (this.selectedIndex < GAME_ITEMS.length) {
+        this.selectedIndex = GAME_ITEMS.length;
+        this.render();
+      }
       return;
     }
     if (input === 'enter') {
@@ -238,7 +271,7 @@ class MenuView {
   }
 
   activateSelected() {
-    const selected = MENU_ITEMS[this.selectedIndex];
+    const selected = ALL_ITEMS[this.selectedIndex];
     if (selected.id === 'chompy') {
       this.actions.onStartChompy();
       return;
@@ -373,5 +406,5 @@ function clampNumber(value, fallback, min, max) {
 
 module.exports = {
   MenuView,
-  MENU_ITEMS,
+  MENU_ITEMS: ALL_ITEMS,
 };
