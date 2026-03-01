@@ -1,6 +1,6 @@
 'use strict';
 
-const { chooseFarthestOption, chooseClosestOption, findPath } = require('../pathing');
+const { chooseClosestOption, findPath } = require('../pathing');
 
 const RECALC_INTERVAL = 4;
 const CLOSE_RANGE = 15;
@@ -10,7 +10,7 @@ function chooseMove(ghost, { player, mode, options, grid }) {
 
     if (mode === 'frightened') {
         ghost._cachedPath = null;
-        return chooseFarthestOption(options, player.x, player.y);
+        return options[Math.floor(Math.random() * options.length)];
     }
     if (mode === 'random') {
         ghost._cachedPath = null;

@@ -12,16 +12,6 @@ function chooseClosestOption(options, targetX, targetY) {
   }, null);
 }
 
-function chooseFarthestOption(options, targetX, targetY) {
-  return options.reduce((best, option) => {
-    const distance = manhattan(option.x, option.y, targetX, targetY);
-    if (!best || distance > best.distance || (distance === best.distance && Math.random() < 0.35)) {
-      return { ...option, distance };
-    }
-    return best;
-  }, null);
-}
-
 function manhattan(ax, ay, bx, by) {
   return Math.abs(ax - bx) + Math.abs(ay - by);
 }
@@ -137,7 +127,6 @@ function findPath(grid, startX, startY, targetX, targetY) {
 
 module.exports = {
   chooseClosestOption,
-  chooseFarthestOption,
   dijkstra,
   findPath,
 };

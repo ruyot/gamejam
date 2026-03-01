@@ -304,8 +304,11 @@ class ChompyGame {
     }
 
     this.ghostAccumulator += dt;
-    while (this.ghostAccumulator >= this.ghostStepMs) {
-      this.ghostAccumulator -= this.ghostStepMs;
+    const effectiveGhostStep = this.powerTimer > 0
+      ? this.ghostStepMs * 2
+      : this.ghostStepMs;
+    while (this.ghostAccumulator >= effectiveGhostStep) {
+      this.ghostAccumulator -= effectiveGhostStep;
       this.stepGhosts();
       if (this.state !== 'running') {
         return;
@@ -376,6 +379,14 @@ class ChompyGame {
       this.statusText = 'Power mode active.';
       this.ringBell();
       consumed = true;
+
+      // Reverse all ghost directions (classic Pac-Man behavior)
+      for (const ghost of this.ghosts) {
+        if (ghost.releaseDelay > 0) continue;
+        const reverse = OPPOSITE_DIRECTION[ghost.dir];
+        if (reverse) ghost.dir = reverse;
+        ghost._cachedPath = null;
+      }
     }
 
     if (consumed) {
@@ -730,9 +741,13 @@ class ChompyGame {
 
   renderGhost(ghost) {
     if (this.powerTimer > 0) {
+      const flashing = this.powerTimer <= 2000 && this.frameCounter % 6 < 3;
+      const color = flashing
+        ? this.colors.ghostFrightenedB
+        : this.colors.ghostFrightenedA;
       return colorize(
         pickDirectionalFrame(this.spriteSet.ghostFrightened, ghost.dir, this.frameCounter, 5),
-        this.frameCounter % 10 < 5 ? this.colors.ghostFrightenedA : this.colors.ghostFrightenedB,
+        color,
       );
     }
     if (ghost.releaseDelay > 0) {

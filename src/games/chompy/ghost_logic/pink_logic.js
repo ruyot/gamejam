@@ -1,6 +1,6 @@
 'use strict';
 
-const { chooseFarthestOption, chooseClosestOption, findPath } = require('../pathing');
+const { chooseClosestOption, findPath } = require('../pathing');
 
 const ACTIVATION_RADIUS = 4;  // player must be this close to trigger chase
 const CHASE_MOVES = 15;       // how many moves Pink chases before stopping
@@ -19,7 +19,7 @@ function chooseMove(ghost, { player, mode, options, grid }) {
 
     if (mode === 'frightened') {
         ghost._cachedPath = null;
-        return chooseFarthestOption(options, player.x, player.y);
+        return options[Math.floor(Math.random() * options.length)];
     }
     if (mode === 'scatter') {
         ghost._cachedPath = null;

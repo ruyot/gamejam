@@ -1,6 +1,6 @@
 'use strict';
 
-const { chooseFarthestOption, findPath } = require('../pathing');
+const { findPath } = require('../pathing');
 
 const RECALC_INTERVAL = 6;
 
@@ -9,7 +9,7 @@ function chooseMove(ghost, { player, mode, options, grid }) {
 
     if (mode === 'frightened') {
         ghost._cachedPath = null;
-        return chooseFarthestOption(options, player.x, player.y);
+        return options[Math.floor(Math.random() * options.length)];
     }
 
     if (!ghost._patrolDir) {
@@ -33,7 +33,7 @@ function chooseMove(ghost, { player, mode, options, grid }) {
         ghost._cachedPath = null;
         ghost._pathStep = 0;
     }
-    
+
     if (!ghost._cachedPath || ghost._cachedPath.length === 0 ||
         !ghost._pathStep || ghost._pathStep >= RECALC_INTERVAL) {
         ghost._cachedPath = findPath(grid, ghost.x, ghost.y, targetX, targetY);
