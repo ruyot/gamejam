@@ -12,7 +12,63 @@ const GAME_ITEMS = [
 
 const UTIL_ITEMS = [
   { id: 'settings', label: 'Settings' },
+  { id: 'info', label: 'Info' },
   { id: 'quit', label: 'Quit' },
+];
+
+const GAME_INFO = [
+  {
+    title: 'Chompy',
+    lines: [
+      'Navigate the maze, eat all the',
+      'pellets, and avoid the ghosts',
+      '',
+      'Ghosts:',
+      '  Red   - Shortest path',
+      '  Blue  - Trails your footsteps',
+      '  Pink  - Lurks, ambushes nearby',
+      '  Yellow - Patrols up and down',
+      '',
+      'Power pellets make ghosts scared',
+      'Combo: 200 > 400 > 800 > 1600',
+      '',
+      '+1 life per level cleared',
+      '+1 life every 10,000 points',
+    ],
+  },
+  {
+    title: 'Snake',
+    lines: [
+      'Classic snake game.',
+      '',
+      'Eat food to grow longer.',
+      'Don\'t hit the walls or yourself!',
+      '',
+      'Coming soon...',
+    ],
+  },
+  {
+    title: 'Tetris',
+    lines: [
+      'Stack falling blocks.',
+      '',
+      'Clear rows to score points.',
+      'Speed increases as you level up!',
+      '',
+      'Coming soon...',
+    ],
+  },
+  {
+    title: 'Space Invaders',
+    lines: [
+      'Defend Earth from alien waves.',
+      '',
+      'Shoot down invaders before',
+      'they reach the bottom!',
+      '',
+      'Coming soon...',
+    ],
+  },
 ];
 
 const ALL_ITEMS = [...GAME_ITEMS, ...UTIL_ITEMS];
@@ -27,7 +83,9 @@ class MenuView {
     this.design = loadDesignSystem().menu;
     this.onKeypress = this.onKeypress.bind(this);
     this.inSettings = false;
+    this.inInfo = false;
     this.settingsIndex = 0;
+    this.infoPage = 0;
     this.soundEnabled = true;
   }
 
@@ -237,6 +295,10 @@ class MenuView {
       this.handleSettingsKey(input);
       return;
     }
+    if (this.inInfo) {
+      this.handleInfoKey(input);
+      return;
+    }
     if (input === 'up' || input === 'w') {
       this.selectedIndex = (this.selectedIndex - 1 + ALL_ITEMS.length) % ALL_ITEMS.length;
       this.render();
@@ -282,6 +344,10 @@ class MenuView {
     }
     if (selected.id === 'settings') {
       this.openSettings();
+      return;
+    }
+    if (selected.id === 'info') {
+      this.openInfo();
       return;
     }
     this.actions.onComingSoon(selected.label);
@@ -401,6 +467,108 @@ class MenuView {
     }
     if (input === 'escape' || input === 'q') {
       this.closeSettings();
+    }
+  }
+
+  openInfo() {
+    this.inInfo = true;
+    this.infoPage = 0;
+
+    const colors = this.design.colors;
+    this.infoOverlay = blessed.box({
+      parent: this.frame,
+      top: 1,
+      left: 1,
+      width: '100%-2',
+      height: '100%-2',
+      tags: true,
+      style: { bg: colors.frameBg },
+    });
+
+    this.infoHeader = blessed.box({
+      parent: this.infoOverlay,
+      top: 2,
+      left: 0,
+      width: '100%',
+      height: 3,
+      tags: true,
+      transparent: true,
+      align: 'center',
+    });
+
+    this.infoBody = blessed.box({
+      parent: this.infoOverlay,
+      top: 6,
+      left: 4,
+      width: '100%-8',
+      height: '100%-10',
+      tags: true,
+      transparent: true,
+      align: 'left',
+    });
+
+    this.infoHint = blessed.box({
+      parent: this.infoOverlay,
+      bottom: 1,
+      left: 0,
+      width: '100%',
+      height: 1,
+      tags: true,
+      transparent: true,
+      align: 'center',
+    });
+
+    this.renderInfo();
+    this.screen.render();
+  }
+
+  closeInfo() {
+    this.inInfo = false;
+    if (this.infoOverlay) {
+      this.infoOverlay.destroy();
+      this.infoOverlay = null;
+      this.infoHeader = null;
+      this.infoBody = null;
+      this.infoHint = null;
+    }
+    this.render();
+  }
+
+  renderInfo() {
+    if (!this.infoOverlay) return;
+    const colors = this.design.colors;
+    const info = GAME_INFO[this.infoPage];
+    const pageNum = `${this.infoPage + 1}/${GAME_INFO.length}`;
+
+    const title = colorize(`${info.title}  (${pageNum})`, colors.selected);
+    const separator = colorize('─'.repeat(30), colors.frameBorder);
+    this.infoHeader.setContent(`${title}\n${separator}`);
+
+    const body = info.lines.map(line =>
+      line === '' ? '' : colorize(line, colors.default),
+    ).join('\n');
+    this.infoBody.setContent(body);
+
+    this.infoHint.setContent(
+      colorize('[←→] Switch Game  [Esc] Back', colors.hintNavigate),
+    );
+  }
+
+  handleInfoKey(input) {
+    if (input === 'right' || input === 'down' || input === 'd' || input === 's') {
+      this.infoPage = (this.infoPage + 1) % GAME_INFO.length;
+      this.renderInfo();
+      this.screen.render();
+      return;
+    }
+    if (input === 'left' || input === 'up' || input === 'a' || input === 'w') {
+      this.infoPage = (this.infoPage - 1 + GAME_INFO.length) % GAME_INFO.length;
+      this.renderInfo();
+      this.screen.render();
+      return;
+    }
+    if (input === 'escape' || input === 'q') {
+      this.closeInfo();
     }
   }
 
