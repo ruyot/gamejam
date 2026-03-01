@@ -415,7 +415,7 @@ class ChompyGame {
         ghost.x = ghost.startX;
         ghost.y = ghost.startY;
         ghost.dir = 'up';
-        ghost.releaseDelay = 700;
+        ghost.releaseDelay = this.powerTimer;
         this.statusText = `Ghost chomped for ${points} points.`;
         continue;
       }
