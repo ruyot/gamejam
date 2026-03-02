@@ -323,9 +323,15 @@ class ChompyGame {
     }
     if (this.canMove(this.player.x, this.player.y, this.player.dir)) {
       const next = this.getNextPosition(this.player.x, this.player.y, this.player.dir);
-      this.player.x = next.x;
-      this.player.y = next.y;
-      this.playerTrail.push({ x: next.x, y: next.y });
+      // Block player from entering ghost chamber entrance
+      const isGhostChamber = this.ghosts.some(g =>
+        next.x === g.startX && (next.y === g.startY || next.y === g.startY - 1)
+      );
+      if (!isGhostChamber) {
+        this.player.x = next.x;
+        this.player.y = next.y;
+        this.playerTrail.push({ x: next.x, y: next.y });
+      }
     }
 
     this.consumeAtPlayer();

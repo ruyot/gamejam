@@ -25,7 +25,7 @@ const GAME_INFO = [
       '',
       'Ghosts:',
       '  Red   - Shortest path',
-      '  Blue  - Trails your footsteps',
+      '  Blue  - Sweeps horizontally',
       '  Pink  - Lurks, ambushes nearby',
       '  Yellow - Patrols up and down',
       '',
