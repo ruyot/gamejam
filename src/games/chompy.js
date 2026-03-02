@@ -226,9 +226,9 @@ class ChompyGame {
       ai: GHOST_AI[index % GHOST_AI.length],
     }));
 
-    this.playerStepMs = Math.max(70, 130 - (this.level - 1) * 5);
+    this.playerStepMs = Math.max(70, 150 - (this.level - 1) * 5);
     this.playerStepMsH = Math.round(this.playerStepMs * 0.55);
-    this.ghostStepMs = Math.max(80, 155 - (this.level - 1) * 6);
+    this.ghostStepMs = Math.max(80, 175 - (this.level - 1) * 6);
 
     this.modeIndex = 0;
     this.modeElapsed = 0;
