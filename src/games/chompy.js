@@ -233,6 +233,7 @@ class ChompyGame {
     this.modeIndex = 0;
     this.modeElapsed = 0;
     this.powerTimer = 0;
+    this.playerTrail = [];
     this.invulnerableTimer = 1000;
     this.respawnTimer = 900;
     this.ghostCombo = 0;
@@ -324,6 +325,7 @@ class ChompyGame {
       const next = this.getNextPosition(this.player.x, this.player.y, this.player.dir);
       this.player.x = next.x;
       this.player.y = next.y;
+      this.playerTrail.push({ x: next.x, y: next.y });
     }
 
     this.consumeAtPlayer();
@@ -355,6 +357,7 @@ class ChompyGame {
       mode,
       options,
       grid: this.grid,
+      playerTrail: this.playerTrail,
     });
 
     if (selected) {
